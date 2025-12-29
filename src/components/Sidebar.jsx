@@ -16,7 +16,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       {/* Logo */}
       <div className="pt-6 pr-6 pb-3 pl-0 border-b border-[#1a1a1a]">
         <div className="flex items-center gap-0">
-          <img src="/icons/arc.png" alt="Arc" className="w-[90px] h-[90px]" />
+          <img src="/icons/Arc.png" alt="Arc" className="w-[90px] h-[90px]" />
           <div className="flex flex-col pl-0 -ml-[8px] flex-1 min-w-0">
             <h1 className="text-2xl font-bold gradient-text leading-tight whitespace-nowrap">Flow On Arc</h1>
             <p className="text-xs text-gray-400 mt-0.5 whitespace-nowrap">Swap, lend and Earn on Arc</p>
