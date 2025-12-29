@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Flow On Arc - DeFi dApp on Arc Network",
   "type": "module",
+  "engines": {
+    "node": ">=20.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
