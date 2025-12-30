@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { WagmiProvider } from 'wagmi';
 import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Analytics } from '@vercel/analytics/react';
 import { ARC_TESTNET } from './constants/contracts';
 import '@rainbow-me/rainbowkit/styles.css';
 import { NotificationProvider } from './components/NotificationProvider';
@@ -112,6 +113,7 @@ function App() {
                 isOpen={isFeedbackOpen} 
                 onClose={() => setIsFeedbackOpen(false)} 
               />
+              <Analytics />
             </div>
           </NotificationProvider>
         </RainbowKitProvider>
