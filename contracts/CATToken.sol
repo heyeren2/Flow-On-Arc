@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
 /**
  * @title CAT Token
- * @dev ERC20 Token for FlowOnArc
+ * @dev ERC20 Token for FlowOnArc with 100M Total Supply
  */
 contract CATToken {
     string public constant name = "CAT Token";
@@ -17,8 +17,9 @@ contract CATToken {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
     
-    constructor(uint256 _initialSupply) {
-        totalSupply = _initialSupply * 10**decimals;
+    constructor() {
+        // 100,000,000 tokens with 18 decimals
+        totalSupply = 100000000 * 10**uint256(decimals);
         balanceOf[msg.sender] = totalSupply;
         emit Transfer(address(0), msg.sender, totalSupply);
     }
@@ -45,12 +46,5 @@ contract CATToken {
         allowance[_from][msg.sender] -= _value;
         emit Transfer(_from, _to, _value);
         return true;
-    }
-    
-    // Mint function (only owner can call)
-    function mint(address _to, uint256 _amount) public {
-        totalSupply += _amount;
-        balanceOf[_to] += _amount;
-        emit Transfer(address(0), _to, _amount);
     }
 }

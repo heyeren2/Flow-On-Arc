@@ -94,16 +94,40 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: #000000;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #5a8a3a;
+  background: #1a1a1a;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b9a4a;
+  background: #2a2a2a;
+}
+
+/* Custom Scrollbar class */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #0a0a0a !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #2a2a2a !important;
+  border-radius: 10px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a !important;
+}
+
+/* Firefox support */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a2a #0a0a0a;
 }
 
 @keyframes slide-in {
@@ -119,6 +143,19 @@ body {
 
 .animate-slide-in {
   animation: slide-in 0.3s ease-out;
+}
+
+@keyframes progress {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.animate-progress {
+  animation: progress linear forwards;
 }
 
 

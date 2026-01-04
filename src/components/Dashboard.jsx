@@ -27,9 +27,9 @@ const Dashboard = () => {
 
   // Fixed token prices
   const tokenPrices = {
-    CAT: 0.5,
-    DARC: 1.0,
-    PANDA: 0.67,
+    CAT: 0.015,
+    DARC: 0.04,
+    PANDA: 0.02,
     USDC: 1.0,
   };
 

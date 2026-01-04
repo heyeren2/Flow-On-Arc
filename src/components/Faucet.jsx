@@ -96,7 +96,7 @@ const Faucet = () => {
     
     fetchClaimable();
     fetchBalances();
-    setShowModal(false);
+    // Modal will auto-close after 5 seconds showing confirmation
     
     return tx;
   };

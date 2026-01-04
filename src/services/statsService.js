@@ -1,45 +1,209 @@
 import { ethers } from 'ethers';
 import { CONTRACTS } from '../constants/contracts';
 import { LENDING_POOL_ABI, SWAP_ROUTER_ABI, FAUCET_ABI } from '../constants/abis';
-import { LENDABLE_TOKENS } from '../constants/tokens';
-import { formatUnits } from 'ethers';
+import { LENDABLE_TOKENS, TOKENS } from '../constants/tokens';
+
+// ========== CACHING & RETRY CONFIGURATION ==========
+
+// Cache for storing last known good values
+const statsCache = {
+  tvl: null,
+  volume: null,
+  transactions: null,
+  historicalTVL: null,
+  historicalVolume: null,
+  historicalTransactions: null,
+  lastUpdated: null,
+};
+
+// Retry configuration
+const RETRY_ATTEMPTS = 3;
+const RETRY_DELAY = 1000; // 1 second
+
+// Block range configuration
+// Maximum blocks to query for "All Time" (prevents timeout on large ranges)
+const MAX_BLOCKS_QUERY = 500000; // ~70 days at 12s blocks
+const BLOCKS_PER_DAY = 7200; // Approximate (12s block time)
+
+// AMM Trading pairs (token paired with USDC)
+const AMM_PAIRS = [
+  { token: TOKENS.CAT, pair: TOKENS.USDC },
+  { token: TOKENS.DARC, pair: TOKENS.USDC },
+  { token: TOKENS.PANDA, pair: TOKENS.USDC },
+];
 
 /**
- * Get Total Value Locked (TVL) from lending pool
- * TVL = Sum of all totalSupplied across all reserves
+ * Utility: Sleep for specified milliseconds
+ */
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Utility: Retry a function up to N times with delay
+ */
+async function withRetry(fn, retries = RETRY_ATTEMPTS, delay = RETRY_DELAY) {
+  let lastError;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      console.warn(`Attempt ${attempt}/${retries} failed:`, error.message);
+      if (attempt < retries) {
+        await sleep(delay * attempt); // Exponential backoff
+      }
+    }
+  }
+  throw lastError;
+}
+
+/**
+ * Utility: Check if provider is ready
+ */
+async function isProviderReady(provider) {
+  if (!provider) return false;
+  try {
+    await provider.getBlockNumber();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Utility: Get a reasonable starting block for event queries
+ * Avoids querying from block 0 which can fail on many networks
+ */
+async function getFromBlock(provider, periodDays = null) {
+  try {
+    const currentBlock = await provider.getBlockNumber();
+    
+    if (periodDays) {
+      // Calculate blocks for the requested period
+      const blocksBack = periodDays * BLOCKS_PER_DAY;
+      return Math.max(0, currentBlock - blocksBack);
+    } else {
+      // "All Time" - use max blocks query to avoid timeout
+      // This covers approximately 70 days of history
+      return Math.max(0, currentBlock - MAX_BLOCKS_QUERY);
+    }
+  } catch (error) {
+    console.error('Error getting block number:', error);
+    return 0;
+  }
+}
+
+/**
+ * Get Total Value Locked (TVL) from lending pool AND AMM pools
+ * TVL = Lending Pool Deposits + AMM Pool Liquidity
  */
 export async function getTotalTVL(provider) {
-  if (!provider) return 0;
+  if (!provider) {
+    return statsCache.tvl || 0;
+  }
+
+  // Check provider readiness
+  const ready = await isProviderReady(provider);
+  if (!ready) {
+    console.warn('Provider not ready, returning cached TVL');
+    return statsCache.tvl || 0;
+  }
 
   try {
     const lendingPool = new ethers.Contract(CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, provider);
-    let totalTVL = 0n;
+    const swapRouter = new ethers.Contract(CONTRACTS.SWAP_ROUTER, SWAP_ROUTER_ABI, provider);
+    
+    let lendingTVL = 0n;
+    let ammTVL = 0n;
 
-    // Get totalSupplied for each supported token
+    // ========== LENDING POOL TVL ==========
+    console.log('Fetching Lending Pool TVL...');
     for (const token of LENDABLE_TOKENS) {
       try {
-        const reserveData = await lendingPool.getReserveData(token.address);
-        // reserveData structure: [availableLiquidity, totalSupplied, totalBorrowed, ltv, priceUSD]
+        const reserveData = await withRetry(() => lendingPool.getReserveData(token.address));
         const totalSupplied = reserveData[1] || 0n;
         const priceUSD = reserveData[4] || 0n;
         
-        // Calculate value: totalSupplied * priceUSD / 1e18 (price is in 18 decimals)
-        // Adjust for token decimals
         const tokenDecimals = token.decimals;
         const scalingFactor = 10n ** BigInt(18 - tokenDecimals);
         const normalizedSupplied = totalSupplied * scalingFactor;
         const valueUSD = (normalizedSupplied * priceUSD) / 10n ** 18n;
         
-        totalTVL += valueUSD;
+        lendingTVL += valueUSD;
+        console.log(`  ${token.symbol}: $${Number(valueUSD) / 1e18}`);
       } catch (error) {
-        console.error(`Error fetching reserve data for ${token.symbol}:`, error);
+        console.error(`Error fetching reserve data for ${token.symbol}:`, error.message);
       }
     }
 
-    return Number(totalTVL) / 1e18;
+    // ========== AMM POOL TVL ==========
+    console.log('Fetching AMM Pool TVL...');
+    for (const { token, pair } of AMM_PAIRS) {
+      try {
+        // Get pool ID with retry
+        const poolId = await withRetry(() => swapRouter.getPoolId(token.address, pair.address));
+        
+        // Get pool reserves with retry
+        const poolData = await withRetry(() => swapRouter.pools(poolId));
+        
+        const reserve0 = poolData[2] || 0n;
+        const reserve1 = poolData[3] || 0n;
+        
+        // Skip if pool is empty
+        if (reserve0 === 0n && reserve1 === 0n) {
+          console.log(`  ${token.symbol}/${pair.symbol}: Empty pool, skipping`);
+          continue;
+        }
+        
+        // Determine which reserve is which token
+        const token0Address = poolData[0];
+        let tokenReserve, usdcReserve;
+        
+        if (token0Address && token0Address.toLowerCase() === token.address.toLowerCase()) {
+          tokenReserve = reserve0;
+          usdcReserve = reserve1;
+        } else {
+          tokenReserve = reserve1;
+          usdcReserve = reserve0;
+        }
+        
+        // Get token price from lending pool
+        const reserveData = await withRetry(() => lendingPool.getReserveData(token.address));
+        const tokenPriceUSD = reserveData[4] || 0n;
+        
+        // Calculate token value in USD
+        const tokenScalingFactor = 10n ** BigInt(18 - token.decimals);
+        const normalizedTokenReserve = tokenReserve * tokenScalingFactor;
+        const tokenValueUSD = (normalizedTokenReserve * tokenPriceUSD) / 10n ** 18n;
+        
+        // USDC value (price = $1)
+        const usdcScalingFactor = 10n ** BigInt(18 - pair.decimals);
+        const normalizedUsdcReserve = usdcReserve * usdcScalingFactor;
+        const usdcPriceUSD = 10n ** 18n;
+        const usdcValueUSD = (normalizedUsdcReserve * usdcPriceUSD) / 10n ** 18n;
+        
+        const poolTVL = tokenValueUSD + usdcValueUSD;
+        ammTVL += poolTVL;
+        console.log(`  ${token.symbol}/${pair.symbol}: $${Number(poolTVL) / 1e18}`);
+      } catch (error) {
+        console.error(`Error fetching AMM pool data for ${token.symbol}/${pair.symbol}:`, error.message);
+      }
+    }
+
+    const totalTVL = Number(lendingTVL + ammTVL) / 1e18;
+    console.log(`Total TVL: $${totalTVL} (Lending: $${Number(lendingTVL) / 1e18}, AMM: $${Number(ammTVL) / 1e18})`);
+
+    // Validate: Don't accept 0 if we had a previous non-zero value
+    if (totalTVL === 0 && statsCache.tvl && statsCache.tvl > 0) {
+      console.warn('TVL returned 0 but cache has value, returning cached value');
+      return statsCache.tvl;
+    }
+
+    // Update cache
+    statsCache.tvl = totalTVL;
+    return totalTVL;
   } catch (error) {
     console.error('Error fetching TVL:', error);
-    return 0;
+    return statsCache.tvl || 0;
   }
 }
 
@@ -47,52 +211,62 @@ export async function getTotalTVL(provider) {
  * Get total swap volume from Swap Router events
  */
 export async function getTotalVolume(provider, periodDays = null) {
-  if (!provider) return 0;
+  if (!provider) {
+    return statsCache.volume || 0;
+  }
+
+  const ready = await isProviderReady(provider);
+  if (!ready) {
+    return statsCache.volume || 0;
+  }
 
   try {
     const swapRouter = new ethers.Contract(CONTRACTS.SWAP_ROUTER, SWAP_ROUTER_ABI, provider);
-    const swapFilter = swapRouter.filters.Swap();
+    const lendingPool = new ethers.Contract(CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, provider);
     
-    let fromBlock = 0;
-    if (periodDays) {
-      const currentBlock = await provider.getBlockNumber();
-      const blocksPerDay = 7200; // Approximate blocks per day (assuming ~12s block time)
-      fromBlock = Math.max(0, currentBlock - (periodDays * blocksPerDay));
-    }
+    // Use helper to get reasonable starting block
+    const fromBlock = await getFromBlock(provider, periodDays);
+    const currentBlock = await provider.getBlockNumber();
+    
+    console.log(`Fetching Volume... (blocks ${fromBlock} to ${currentBlock})`);
 
-    const events = await swapRouter.queryFilter(swapFilter, fromBlock);
+    const swapFilter = swapRouter.filters.Swap();
+    const events = await withRetry(() => swapRouter.queryFilter(swapFilter, fromBlock));
+    
+    console.log(`  Found ${events.length} swap events`);
     
     let totalVolume = 0n;
 
     for (const event of events) {
       const { tokenIn, amountIn } = event.args;
       
-      // Get token price
       try {
-        const lendingPool = new ethers.Contract(CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, provider);
         const reserveData = await lendingPool.getReserveData(tokenIn);
         const priceUSD = reserveData[4] || 0n;
         
-        // Find token decimals
         const token = LENDABLE_TOKENS.find(t => t.address.toLowerCase() === tokenIn.toLowerCase());
         const decimals = token?.decimals || 18;
         
-        // Calculate volume in USD
         const scalingFactor = 10n ** BigInt(18 - decimals);
         const normalizedAmount = amountIn * scalingFactor;
         const valueUSD = (normalizedAmount * priceUSD) / 10n ** 18n;
         
         totalVolume += valueUSD;
+        console.log(`  ${token?.symbol || 'Unknown'} swap: $${Number(valueUSD) / 1e18}`);
       } catch (error) {
-        // Skip if price fetch fails
-        console.warn(`Could not get price for token ${tokenIn}:`, error);
+        console.warn(`  Error processing swap event:`, error.message);
       }
     }
 
-    return Number(totalVolume) / 1e18;
+    const volume = Number(totalVolume) / 1e18;
+    console.log(`  Total Volume: $${volume}`);
+    
+    // Update cache
+    statsCache.volume = volume;
+    return volume;
   } catch (error) {
     console.error('Error fetching volume:', error);
-    return 0;
+    return statsCache.volume || 0;
   }
 }
 
@@ -100,63 +274,84 @@ export async function getTotalVolume(provider, periodDays = null) {
  * Get total transaction count from all contracts
  */
 export async function getTotalTransactions(provider, periodDays = null) {
-  if (!provider) return 0;
+  if (!provider) {
+    return statsCache.transactions || 0;
+  }
+
+  const ready = await isProviderReady(provider);
+  if (!ready) {
+    return statsCache.transactions || 0;
+  }
 
   try {
-    let fromBlock = 0;
-    if (periodDays) {
-      const currentBlock = await provider.getBlockNumber();
-      const blocksPerDay = 7200;
-      fromBlock = Math.max(0, currentBlock - (periodDays * blocksPerDay));
-    }
+    // Use helper to get reasonable starting block
+    const fromBlock = await getFromBlock(provider, periodDays);
+    const currentBlock = await provider.getBlockNumber();
+    
+    console.log(`Fetching Transactions... (blocks ${fromBlock} to ${currentBlock})`);
 
-    let totalCount = 0;
+    let swapCount = 0;
+    let supplyCount = 0;
+    let withdrawCount = 0;
+    let borrowCount = 0;
+    let repayCount = 0;
+    let faucetCount = 0;
 
     // Count Swap events
     try {
       const swapRouter = new ethers.Contract(CONTRACTS.SWAP_ROUTER, SWAP_ROUTER_ABI, provider);
       const swapFilter = swapRouter.filters.Swap();
-      const swapEvents = await swapRouter.queryFilter(swapFilter, fromBlock);
-      totalCount += swapEvents.length;
+      const swapEvents = await withRetry(() => swapRouter.queryFilter(swapFilter, fromBlock));
+      swapCount = swapEvents.length;
     } catch (error) {
-      console.error('Error counting swap events:', error);
+      console.error('  Error counting swap events:', error.message);
     }
 
     // Count Lending Pool events
     try {
       const lendingPool = new ethers.Contract(CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, provider);
       
-      const supplyFilter = lendingPool.filters.CollateralSupplied();
-      const withdrawFilter = lendingPool.filters.CollateralWithdrawn();
-      const borrowFilter = lendingPool.filters.TokenBorrowed();
-      const repayFilter = lendingPool.filters.TokenRepaid();
-      
       const [supplyEvents, withdrawEvents, borrowEvents, repayEvents] = await Promise.all([
-        lendingPool.queryFilter(supplyFilter, fromBlock),
-        lendingPool.queryFilter(withdrawFilter, fromBlock),
-        lendingPool.queryFilter(borrowFilter, fromBlock),
-        lendingPool.queryFilter(repayFilter, fromBlock),
+        withRetry(() => lendingPool.queryFilter(lendingPool.filters.CollateralSupplied(), fromBlock)),
+        withRetry(() => lendingPool.queryFilter(lendingPool.filters.CollateralWithdrawn(), fromBlock)),
+        withRetry(() => lendingPool.queryFilter(lendingPool.filters.TokenBorrowed(), fromBlock)),
+        withRetry(() => lendingPool.queryFilter(lendingPool.filters.TokenRepaid(), fromBlock)),
       ]);
       
-      totalCount += supplyEvents.length + withdrawEvents.length + borrowEvents.length + repayEvents.length;
+      supplyCount = supplyEvents.length;
+      withdrawCount = withdrawEvents.length;
+      borrowCount = borrowEvents.length;
+      repayCount = repayEvents.length;
     } catch (error) {
-      console.error('Error counting lending pool events:', error);
+      console.error('  Error counting lending pool events:', error.message);
     }
 
     // Count Faucet events
     try {
       const faucet = new ethers.Contract(CONTRACTS.FAUCET, FAUCET_ABI, provider);
       const faucetFilter = faucet.filters.TokensClaimed();
-      const faucetEvents = await faucet.queryFilter(faucetFilter, fromBlock);
-      totalCount += faucetEvents.length;
+      const faucetEvents = await withRetry(() => faucet.queryFilter(faucetFilter, fromBlock));
+      faucetCount = faucetEvents.length;
     } catch (error) {
-      console.error('Error counting faucet events:', error);
+      console.error('  Error counting faucet events:', error.message);
     }
 
+    const totalCount = swapCount + supplyCount + withdrawCount + borrowCount + repayCount + faucetCount;
+    
+    console.log(`  Swap events: ${swapCount}`);
+    console.log(`  Supply events: ${supplyCount}`);
+    console.log(`  Withdraw events: ${withdrawCount}`);
+    console.log(`  Borrow events: ${borrowCount}`);
+    console.log(`  Repay events: ${repayCount}`);
+    console.log(`  Faucet events: ${faucetCount}`);
+    console.log(`  Total Transactions: ${totalCount}`);
+
+    // Update cache
+    statsCache.transactions = totalCount;
     return totalCount;
   } catch (error) {
     console.error('Error fetching transaction count:', error);
-    return 0;
+    return statsCache.transactions || 0;
   }
 }
 
@@ -164,67 +359,57 @@ export async function getTotalTransactions(provider, periodDays = null) {
  * Get historical TVL data points by tracking supply/withdraw events
  */
 export async function getHistoricalTVL(provider, periodDays = null) {
-  if (!provider) return [];
+  if (!provider) return statsCache.historicalTVL || [];
 
   try {
     const currentTVL = await getTotalTVL(provider);
     const lendingPool = new ethers.Contract(CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, provider);
     
-    let fromBlock = 0;
+    // Use helper to get reasonable starting block
+    const fromBlock = await getFromBlock(provider, periodDays);
     const currentBlock = await provider.getBlockNumber();
-    
-    if (periodDays) {
-      const blocksPerDay = 7200;
-      fromBlock = Math.max(0, currentBlock - (periodDays * blocksPerDay));
-    }
 
-    // Get supply and withdraw events to track TVL changes over time
-    const supplyFilter = lendingPool.filters.CollateralSupplied();
-    const withdrawFilter = lendingPool.filters.CollateralWithdrawn();
-    
     const [supplyEvents, withdrawEvents] = await Promise.all([
-      lendingPool.queryFilter(supplyFilter, fromBlock),
-      lendingPool.queryFilter(withdrawFilter, fromBlock),
+      withRetry(() => lendingPool.queryFilter(lendingPool.filters.CollateralSupplied(), fromBlock)),
+      withRetry(() => lendingPool.queryFilter(lendingPool.filters.CollateralWithdrawn(), fromBlock)),
     ]);
 
-    // Get block timestamps for events
-    const supplyEventsWithTimestamps = await Promise.all(
-      supplyEvents.map(async (e) => {
+    // Get block timestamps for events (limited batch)
+    const allEvents = [...supplyEvents.map(e => ({ ...e, type: 'supply' })), 
+                       ...withdrawEvents.map(e => ({ ...e, type: 'withdraw' }))];
+    
+    // Sample blocks for timestamps (avoid too many RPC calls)
+    const uniqueBlocks = [...new Set(allEvents.map(e => e.blockNumber))].slice(0, 50);
+    const blockTimestamps = {};
+    
+    await Promise.all(
+      uniqueBlocks.map(async (blockNum) => {
         try {
-          const block = await provider.getBlock(e.blockNumber);
-          return { ...e, type: 'supply', timestamp: block.timestamp };
+          const block = await provider.getBlock(blockNum);
+          blockTimestamps[blockNum] = block?.timestamp || Math.floor(Date.now() / 1000);
         } catch {
-          return { ...e, type: 'supply', timestamp: Date.now() / 1000 };
+          blockTimestamps[blockNum] = Math.floor(Date.now() / 1000);
         }
       })
     );
 
-    const withdrawEventsWithTimestamps = await Promise.all(
-      withdrawEvents.map(async (e) => {
-        try {
-          const block = await provider.getBlock(e.blockNumber);
-          return { ...e, type: 'withdraw', timestamp: block.timestamp };
-        } catch {
-          return { ...e, type: 'withdraw', timestamp: Date.now() / 1000 };
-        }
-      })
-    );
+    // Assign timestamps
+    const eventsWithTimestamps = allEvents.map(event => ({
+      ...event,
+      timestamp: blockTimestamps[event.blockNumber] || Math.floor(Date.now() / 1000),
+    })).sort((a, b) => a.timestamp - b.timestamp);
 
-    // Sort by timestamp
-    const allEvents = [...supplyEventsWithTimestamps, ...withdrawEventsWithTimestamps].sort((a, b) => a.timestamp - b.timestamp);
-
-    // Determine time buckets
+    // Build time buckets
     const now = Math.floor(Date.now() / 1000);
     const periodSeconds = periodDays ? periodDays * 86400 : 
-                         allEvents.length > 0 ? now - allEvents[0].timestamp : 86400;
-    const dataPoints = periodDays ? Math.min(periodDays, 30) : 30;
+                         eventsWithTimestamps.length > 0 ? now - eventsWithTimestamps[0].timestamp : 86400;
+    const dataPoints = Math.min(periodDays || 30, 30);
     const bucketSize = Math.max(3600, Math.floor(periodSeconds / dataPoints));
 
-    // Group events by time buckets and calculate cumulative changes
     const buckets = {};
     const startTime = now - periodSeconds;
     
-    for (const event of allEvents) {
+    for (const event of eventsWithTimestamps) {
       const bucketIndex = Math.floor((event.timestamp - startTime) / bucketSize);
       const clampedIndex = Math.max(0, Math.min(dataPoints - 1, bucketIndex));
       
@@ -232,7 +417,6 @@ export async function getHistoricalTVL(provider, periodDays = null) {
         buckets[clampedIndex] = { supply: 0, withdraw: 0 };
       }
 
-      // Calculate USD value of the amount
       try {
         const { token, amount } = event.args;
         const reserveData = await lendingPool.getReserveData(token);
@@ -250,12 +434,12 @@ export async function getHistoricalTVL(provider, periodDays = null) {
         } else {
           buckets[clampedIndex].withdraw += valueUSD;
         }
-      } catch (error) {
+      } catch {
         // Skip if calculation fails
       }
     }
 
-    // Build cumulative TVL data (start from current and work backwards)
+    // Build cumulative TVL data
     const data = [];
     let cumulativeChange = 0;
     
@@ -264,20 +448,20 @@ export async function getHistoricalTVL(provider, periodDays = null) {
       if (bucket) {
         cumulativeChange += (bucket.supply - bucket.withdraw);
       }
-      // Approximate historical TVL by subtracting cumulative changes from current
       const historicalTVL = Math.max(0, currentTVL - cumulativeChange);
       data.unshift(historicalTVL);
     }
 
-    // If no data, return current TVL for all points
     if (data.length === 0) {
       return Array(dataPoints).fill(currentTVL);
     }
 
+    // Update cache
+    statsCache.historicalTVL = data;
     return data;
   } catch (error) {
     console.error('Error fetching historical TVL:', error);
-    return [];
+    return statsCache.historicalTVL || [];
   }
 }
 
@@ -285,56 +469,57 @@ export async function getHistoricalTVL(provider, periodDays = null) {
  * Get historical volume data points
  */
 export async function getHistoricalVolume(provider, periodDays = null) {
-  if (!provider) return [];
+  if (!provider) return statsCache.historicalVolume || [];
 
   try {
     const swapRouter = new ethers.Contract(CONTRACTS.SWAP_ROUTER, SWAP_ROUTER_ABI, provider);
-    const swapFilter = swapRouter.filters.Swap();
+    const lendingPool = new ethers.Contract(CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, provider);
     
-    let fromBlock = 0;
+    // Use helper to get reasonable starting block
+    const fromBlock = await getFromBlock(provider, periodDays);
     const currentBlock = await provider.getBlockNumber();
-    
-    if (periodDays) {
-      const blocksPerDay = 7200;
-      fromBlock = Math.max(0, currentBlock - (periodDays * blocksPerDay));
-    }
 
-    const events = await swapRouter.queryFilter(swapFilter, fromBlock);
+    const events = await withRetry(() => swapRouter.queryFilter(swapRouter.filters.Swap(), fromBlock));
     
-    // Get block timestamps for all events
-    const eventsWithTimestamps = await Promise.all(
-      events.map(async (event) => {
+    // Sample blocks for timestamps
+    const uniqueBlocks = [...new Set(events.map(e => e.blockNumber))].slice(0, 50);
+    const blockTimestamps = {};
+    
+    await Promise.all(
+      uniqueBlocks.map(async (blockNum) => {
         try {
-          const block = await provider.getBlock(event.blockNumber);
-          return {
-            ...event,
-            timestamp: block.timestamp,
-          };
-        } catch (error) {
-          return { ...event, timestamp: Date.now() / 1000 };
+          const block = await provider.getBlock(blockNum);
+          blockTimestamps[blockNum] = block?.timestamp || Math.floor(Date.now() / 1000);
+        } catch {
+          blockTimestamps[blockNum] = Math.floor(Date.now() / 1000);
         }
       })
     );
 
-    // Determine time buckets
-    const now = Math.floor(Date.now() / 1000);
-    const periodSeconds = periodDays ? periodDays * 86400 : now - eventsWithTimestamps[0]?.timestamp || 86400;
-    const dataPoints = periodDays ? Math.min(periodDays, 30) : 30;
-    const bucketSize = Math.max(3600, Math.floor(periodSeconds / dataPoints)); // At least 1 hour buckets
+    const eventsWithTimestamps = events.map(event => ({
+      ...event,
+      timestamp: blockTimestamps[event.blockNumber] || Math.floor(Date.now() / 1000),
+    }));
 
-    // Group events by time buckets and calculate volume per bucket
+    // Build time buckets
+    const now = Math.floor(Date.now() / 1000);
+    const periodSeconds = periodDays ? periodDays * 86400 : 
+                         eventsWithTimestamps[0]?.timestamp ? now - eventsWithTimestamps[0].timestamp : 86400;
+    const dataPoints = Math.min(periodDays || 30, 30);
+    const bucketSize = Math.max(3600, Math.floor(periodSeconds / dataPoints));
+
     const buckets = {};
     
     for (const event of eventsWithTimestamps) {
       const bucketIndex = Math.floor((event.timestamp - (now - periodSeconds)) / bucketSize);
-      if (!buckets[bucketIndex]) {
-        buckets[bucketIndex] = [];
+      const clampedIndex = Math.max(0, Math.min(dataPoints - 1, bucketIndex));
+      if (!buckets[clampedIndex]) {
+        buckets[clampedIndex] = [];
       }
-      buckets[bucketIndex].push(event);
+      buckets[clampedIndex].push(event);
     }
 
     // Calculate volume for each bucket
-    const lendingPool = new ethers.Contract(CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, provider);
     const data = [];
     
     for (let i = 0; i < dataPoints; i++) {
@@ -355,7 +540,7 @@ export async function getHistoricalVolume(provider, periodDays = null) {
           const valueUSD = (normalizedAmount * priceUSD) / 10n ** 18n;
           
           bucketVolume += valueUSD;
-        } catch (error) {
+        } catch {
           // Skip if calculation fails
         }
       }
@@ -363,10 +548,12 @@ export async function getHistoricalVolume(provider, periodDays = null) {
       data.push(Number(bucketVolume) / 1e18);
     }
 
+    // Update cache
+    statsCache.historicalVolume = data;
     return data;
   } catch (error) {
     console.error('Error fetching historical volume:', error);
-    return [];
+    return statsCache.historicalVolume || [];
   }
 }
 
@@ -374,78 +561,50 @@ export async function getHistoricalVolume(provider, periodDays = null) {
  * Get historical transaction count data points
  */
 export async function getHistoricalTransactions(provider, periodDays = null) {
-  if (!provider) return [];
+  if (!provider) return statsCache.historicalTransactions || [];
 
   try {
-    let fromBlock = 0;
+    // Use helper to get reasonable starting block
+    const fromBlock = await getFromBlock(provider, periodDays);
     const currentBlock = await provider.getBlockNumber();
-    
-    if (periodDays) {
-      const blocksPerDay = 7200;
-      fromBlock = Math.max(0, currentBlock - (periodDays * blocksPerDay));
-    }
 
-    // Fetch all events
+    // Fetch all events in parallel
     const [swapEvents, supplyEvents, withdrawEvents, borrowEvents, repayEvents, faucetEvents] = await Promise.all([
       (async () => {
         try {
           const swapRouter = new ethers.Contract(CONTRACTS.SWAP_ROUTER, SWAP_ROUTER_ABI, provider);
-          const swapFilter = swapRouter.filters.Swap();
-          const events = await swapRouter.queryFilter(swapFilter, fromBlock);
-          return events.map(e => ({ ...e, timestamp: null }));
-        } catch (error) {
-          return [];
-        }
+          return await withRetry(() => swapRouter.queryFilter(swapRouter.filters.Swap(), fromBlock));
+        } catch { return []; }
       })(),
       (async () => {
         try {
           const lendingPool = new ethers.Contract(CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, provider);
-          const filter = lendingPool.filters.CollateralSupplied();
-          const events = await lendingPool.queryFilter(filter, fromBlock);
-          return events.map(e => ({ ...e, timestamp: null }));
-        } catch (error) {
-          return [];
-        }
+          return await withRetry(() => lendingPool.queryFilter(lendingPool.filters.CollateralSupplied(), fromBlock));
+        } catch { return []; }
       })(),
       (async () => {
         try {
           const lendingPool = new ethers.Contract(CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, provider);
-          const filter = lendingPool.filters.CollateralWithdrawn();
-          const events = await lendingPool.queryFilter(filter, fromBlock);
-          return events.map(e => ({ ...e, timestamp: null }));
-        } catch (error) {
-          return [];
-        }
+          return await withRetry(() => lendingPool.queryFilter(lendingPool.filters.CollateralWithdrawn(), fromBlock));
+        } catch { return []; }
       })(),
       (async () => {
         try {
           const lendingPool = new ethers.Contract(CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, provider);
-          const filter = lendingPool.filters.TokenBorrowed();
-          const events = await lendingPool.queryFilter(filter, fromBlock);
-          return events.map(e => ({ ...e, timestamp: null }));
-        } catch (error) {
-          return [];
-        }
+          return await withRetry(() => lendingPool.queryFilter(lendingPool.filters.TokenBorrowed(), fromBlock));
+        } catch { return []; }
       })(),
       (async () => {
         try {
           const lendingPool = new ethers.Contract(CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, provider);
-          const filter = lendingPool.filters.TokenRepaid();
-          const events = await lendingPool.queryFilter(filter, fromBlock);
-          return events.map(e => ({ ...e, timestamp: null }));
-        } catch (error) {
-          return [];
-        }
+          return await withRetry(() => lendingPool.queryFilter(lendingPool.filters.TokenRepaid(), fromBlock));
+        } catch { return []; }
       })(),
       (async () => {
         try {
           const faucet = new ethers.Contract(CONTRACTS.FAUCET, FAUCET_ABI, provider);
-          const filter = faucet.filters.TokensClaimed();
-          const events = await faucet.queryFilter(filter, fromBlock);
-          return events.map(e => ({ ...e, timestamp: null }));
-        } catch (error) {
-          return [];
-        }
+          return await withRetry(() => faucet.queryFilter(faucet.filters.TokensClaimed(), fromBlock));
+        } catch { return []; }
       })(),
     ]);
 
@@ -459,40 +618,33 @@ export async function getHistoricalTransactions(provider, periodDays = null) {
       ...faucetEvents,
     ];
 
-    // Get timestamps for all events (batch process for efficiency)
-    const uniqueBlocks = [...new Set(allEvents.map(e => e.blockNumber))];
+    // Sample blocks for timestamps
+    const uniqueBlocks = [...new Set(allEvents.map(e => e.blockNumber))].slice(0, 100);
     const blockTimestamps = {};
     
-    // Sample blocks to get timestamps (to avoid too many calls)
-    const sampleSize = Math.min(uniqueBlocks.length, 100);
-    const sampledBlocks = uniqueBlocks.slice(0, sampleSize);
-    
     await Promise.all(
-      sampledBlocks.map(async (blockNum) => {
+      uniqueBlocks.map(async (blockNum) => {
         try {
           const block = await provider.getBlock(blockNum);
-          blockTimestamps[blockNum] = block.timestamp;
-        } catch (error) {
-          blockTimestamps[blockNum] = Date.now() / 1000;
+          blockTimestamps[blockNum] = block?.timestamp || Math.floor(Date.now() / 1000);
+        } catch {
+          blockTimestamps[blockNum] = Math.floor(Date.now() / 1000);
         }
       })
     );
 
-    // Assign timestamps to events
     const eventsWithTimestamps = allEvents.map(event => ({
       ...event,
-      timestamp: blockTimestamps[event.blockNumber] || Date.now() / 1000,
+      timestamp: blockTimestamps[event.blockNumber] || Math.floor(Date.now() / 1000),
     })).sort((a, b) => a.timestamp - b.timestamp);
 
-    // Determine time buckets
+    // Build time buckets
     const now = Math.floor(Date.now() / 1000);
     const periodSeconds = periodDays ? periodDays * 86400 : 
-                         eventsWithTimestamps.length > 0 ? 
-                         now - eventsWithTimestamps[0].timestamp : 86400;
-    const dataPoints = periodDays ? Math.min(periodDays, 30) : 30;
+                         eventsWithTimestamps.length > 0 ? now - eventsWithTimestamps[0].timestamp : 86400;
+    const dataPoints = Math.min(periodDays || 30, 30);
     const bucketSize = Math.max(3600, Math.floor(periodSeconds / dataPoints));
 
-    // Group events by time buckets
     const buckets = {};
     const startTime = now - periodSeconds;
     
@@ -502,50 +654,92 @@ export async function getHistoricalTransactions(provider, periodDays = null) {
       buckets[clampedIndex] = (buckets[clampedIndex] || 0) + 1;
     }
 
-    // Build data array
     const data = [];
     for (let i = 0; i < dataPoints; i++) {
       data.push(buckets[i] || 0);
     }
 
+    // Update cache
+    statsCache.historicalTransactions = data;
     return data;
   } catch (error) {
     console.error('Error fetching historical transactions:', error);
-    return [];
+    return statsCache.historicalTransactions || [];
   }
 }
 
 /**
- * Get all protocol statistics
+ * Get all protocol statistics with caching and retry
  */
 export async function getProtocolStats(provider, periodDays = null) {
+  // Return cached data if no provider
   if (!provider) {
     return {
-      tvl: 0,
-      volume: 0,
-      transactions: 0,
-      historicalTVL: [],
-      historicalVolume: [],
-      historicalTransactions: [],
+      tvl: statsCache.tvl || 0,
+      volume: statsCache.volume || 0,
+      transactions: statsCache.transactions || 0,
+      historicalTVL: statsCache.historicalTVL || [],
+      historicalVolume: statsCache.historicalVolume || [],
+      historicalTransactions: statsCache.historicalTransactions || [],
     };
   }
 
-  const [tvl, volume, transactions, historicalTVL, historicalVolume, historicalTransactions] = await Promise.all([
-    getTotalTVL(provider),
-    getTotalVolume(provider, periodDays),
-    getTotalTransactions(provider, periodDays),
-    getHistoricalTVL(provider, periodDays),
-    getHistoricalVolume(provider, periodDays),
-    getHistoricalTransactions(provider, periodDays),
-  ]);
+  // Check provider readiness
+  const ready = await isProviderReady(provider);
+  if (!ready) {
+    console.warn('Provider not ready, returning cached stats');
+    return {
+      tvl: statsCache.tvl || 0,
+      volume: statsCache.volume || 0,
+      transactions: statsCache.transactions || 0,
+      historicalTVL: statsCache.historicalTVL || [],
+      historicalVolume: statsCache.historicalVolume || [],
+      historicalTransactions: statsCache.historicalTransactions || [],
+    };
+  }
 
-  return {
-    tvl,
-    volume,
-    transactions,
-    historicalTVL,
-    historicalVolume,
-    historicalTransactions,
-  };
+  try {
+    // Fetch all stats in parallel
+    const [tvl, volume, transactions, historicalTVL, historicalVolume, historicalTransactions] = await Promise.all([
+      getTotalTVL(provider),
+      getTotalVolume(provider, periodDays),
+      getTotalTransactions(provider, periodDays),
+      getHistoricalTVL(provider, periodDays),
+      getHistoricalVolume(provider, periodDays),
+      getHistoricalTransactions(provider, periodDays),
+    ]);
+
+    // Update cache timestamp
+    statsCache.lastUpdated = Date.now();
+
+    return {
+      tvl,
+      volume,
+      transactions,
+      historicalTVL,
+      historicalVolume,
+      historicalTransactions,
+    };
+  } catch (error) {
+    console.error('Error fetching protocol stats:', error);
+    // Return cached data on error
+    return {
+      tvl: statsCache.tvl || 0,
+      volume: statsCache.volume || 0,
+      transactions: statsCache.transactions || 0,
+      historicalTVL: statsCache.historicalTVL || [],
+      historicalVolume: statsCache.historicalVolume || [],
+      historicalTransactions: statsCache.historicalTransactions || [],
+    };
+  }
 }
 
+/**
+ * Get cache status (for debugging)
+ */
+export function getCacheStatus() {
+  return {
+    ...statsCache,
+    age: statsCache.lastUpdated ? Date.now() - statsCache.lastUpdated : null,
+  };
+}

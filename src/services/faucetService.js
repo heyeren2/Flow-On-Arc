@@ -17,26 +17,35 @@ export async function getClaimableAmounts(provider, userAddress) {
   try {
     const faucetContract = new ethers.Contract(CONTRACTS.FAUCET, FAUCET_ABI, provider);
     
-    const [claimableResult, nextClaimTime, canClaimNow, tier] = await Promise.all([
-      faucetContract.getClaimableAmounts(userAddress),
-      faucetContract.getNextClaimTime(userAddress),
-      faucetContract.canClaim(userAddress),
-      faucetContract.getUserTier(userAddress),
-    ]);
+    const tierInt = await faucetContract.getUserTier(userAddress);
+    const nextClaim = await faucetContract.nextClaimTime(userAddress);
+    
+    const tierIndex = Number(tierInt);
+    
+    if (tierIndex === -1) {
+      return {
+        catAmount: 0n,
+        darcAmount: 0n,
+        pandaAmount: 0n,
+        tier: 0,
+        nextClaimTime: 0,
+        canClaim: false,
+      };
+    }
 
-    // Handle tuple response - ethers returns tuples as objects with numeric keys
-    // The ABI shows: returns (uint256 catAmount, uint256 darcAmount, uint256 pandaAmount, uint256 tierIndex)
-    const catAmount = claimableResult.catAmount ?? claimableResult[0] ?? 0n;
-    const darcAmount = claimableResult.darcAmount ?? claimableResult[1] ?? 0n;
-    const pandaAmount = claimableResult.pandaAmount ?? claimableResult[2] ?? 0n;
+    const tierInfo = await faucetContract.tiers(tierIndex);
+    const rewardAmount = tierInfo.rewardAmount;
+    
+    const now = Math.floor(Date.now() / 1000);
+    const canClaimNow = now >= Number(nextClaim);
 
     return {
-      catAmount: typeof catAmount === 'bigint' ? catAmount : BigInt(catAmount?.toString() || '0'),
-      darcAmount: typeof darcAmount === 'bigint' ? darcAmount : BigInt(darcAmount?.toString() || '0'),
-      pandaAmount: typeof pandaAmount === 'bigint' ? pandaAmount : BigInt(pandaAmount?.toString() || '0'),
-      tier: Number(tier),
-      nextClaimTime: Number(nextClaimTime),
-      canClaim: Boolean(canClaimNow),
+      catAmount: rewardAmount,
+      darcAmount: rewardAmount,
+      pandaAmount: rewardAmount,
+      tier: tierIndex,
+      nextClaimTime: Number(nextClaim),
+      canClaim: canClaimNow,
     };
   } catch (error) {
     console.error('Error fetching claimable amounts:', error);

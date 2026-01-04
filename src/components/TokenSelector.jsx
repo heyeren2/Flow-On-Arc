@@ -233,14 +233,14 @@ const TokenSelector = ({
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                   YOUR TOKENS
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   {tokensWithBalances.map((token) => {
                     const isActive = selectedToken?.symbol === token.symbol;
                     return (
                       <button
                         key={token.symbol}
                         onClick={() => handleSelect(token)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-200 ${
+                        className={`flex items-center justify-center gap-1.5 py-2 rounded-full font-medium transition-all duration-200 ${
                           isActive
                             ? 'bg-[#5a8a3a] text-white shadow-lg shadow-[#5a8a3a]/20'
                             : 'bg-[#3a3a3a] text-[#9ca3af] hover:bg-[#454545] hover:text-white'
@@ -249,10 +249,10 @@ const TokenSelector = ({
                         <img 
                           src={token.icon} 
                           alt={token.symbol} 
-                          className={`w-5 h-5 rounded-full ${isActive ? '' : 'opacity-70'}`}
+                          className={`w-4 h-4 rounded-full ${isActive ? '' : 'opacity-70'}`}
                           onError={(e) => { e.target.style.display = 'none'; }}
                         />
-                        <span>{token.symbol}</span>
+                        <span className="text-[13px]">{token.symbol}</span>
                       </button>
                     );
                   })}

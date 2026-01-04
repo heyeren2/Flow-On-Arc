@@ -68,7 +68,7 @@ const PriceChart = ({ token }) => {
     };
 
     fetchPrice();
-    const interval = setInterval(fetchPrice, 30000); // Update every 30 seconds
+    const interval = setInterval(fetchPrice, 3600000); // Update every 1 hour (if no token change)
 
     return () => clearInterval(interval);
   }, [token, provider, selectedTimeframe]);

@@ -88,7 +88,7 @@ const Swap = () => {
     setFromAmount('');
     setToAmount('');
     fetchBalances();
-    setShowModal(false);
+    // Modal will auto-close after 5 seconds showing confirmation
     
     return tx;
   };
@@ -101,7 +101,17 @@ const Swap = () => {
   };
 
   const setMaxAmount = () => {
-    setFromAmount(balances[fromToken.symbol] || '0');
+    setFromAmount((balances[fromToken.symbol] || '0').replace(/,/g, ''));
+  };
+
+  const isInsufficientBalance = isConnected && fromAmount && fromToken && parseFloat(fromAmount) > parseFloat((balances[fromToken.symbol] || '0').replace(/,/g, ''));
+
+  const getButtonText = () => {
+    if (swapping) return 'Swapping...';
+    if (!isConnected) return 'Connect Wallet';
+    if (!fromAmount || !toAmount) return 'Enter Amount';
+    if (isInsufficientBalance) return 'Insufficient Balance';
+    return 'Swap';
   };
 
   return (
@@ -128,7 +138,7 @@ const Swap = () => {
                 value={fromAmount}
                 onChange={(e) => setFromAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-4 py-3 text-white pr-16"
+                className={`w-full bg-[#1a1a1a] border ${isInsufficientBalance ? 'border-red-500/50 focus:border-red-500' : 'border-[#2a2a2a]'} rounded-lg px-4 py-3 text-white pr-16`}
               />
               <button
                 onClick={setMaxAmount}
@@ -138,7 +148,7 @@ const Swap = () => {
               </button>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className={`text-xs mt-1 ${isInsufficientBalance ? 'text-red-400' : 'text-gray-500'}`}>
             Balance: {balances[fromToken.symbol] || '0.00'}
           </p>
         </div>
@@ -180,10 +190,10 @@ const Swap = () => {
         {/* Swap Button */}
         <button
           onClick={handleSwap}
-          disabled={!isConnected || !fromAmount || !toAmount || swapping}
+          disabled={!isConnected || !fromAmount || !toAmount || swapping || isInsufficientBalance}
           className="w-full gradient-bg text-white py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity shadow-md"
         >
-          {swapping ? 'Swapping...' : isConnected ? 'Swap' : 'Connect Wallet'}
+          {getButtonText()}
         </button>
         </div>
 

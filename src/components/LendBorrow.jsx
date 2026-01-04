@@ -116,7 +116,7 @@ const LendBorrow = () => {
     setAmount('');
     fetchAccountData();
     fetchBalances();
-    setShowModal(false);
+    // Modal will auto-close after 5 seconds showing confirmation
     
     return tx;
   };
@@ -142,7 +142,7 @@ const LendBorrow = () => {
     setAmount('');
     fetchAccountData();
     fetchBalances();
-    setShowModal(false);
+    // Modal will auto-close after 5 seconds showing confirmation
     
     return tx;
   };
@@ -168,7 +168,7 @@ const LendBorrow = () => {
     setAmount('');
     fetchAccountData();
     fetchBalances();
-    setShowModal(false);
+    // Modal will auto-close after 5 seconds showing confirmation
     
     return tx;
   };
@@ -199,21 +199,47 @@ const LendBorrow = () => {
     setAmount('');
     fetchAccountData();
     fetchBalances();
-    setShowModal(false);
+    // Modal will auto-close after 5 seconds showing confirmation
     
     return tx;
   };
 
   const setMaxAmount = () => {
     if (activeTab === 'supply') {
-      setAmount(balances[selectedToken.symbol] || '0');
+      setAmount((balances[selectedToken.symbol] || '0').replace(/,/g, ''));
     } else if (activeTab === 'withdraw') {
-      setAmount(formatTokenAmount(userCollateral[selectedToken.symbol] || 0n, selectedToken.decimals));
+      setAmount(formatTokenAmount(userCollateral[selectedToken.symbol] || 0n, selectedToken.decimals).replace(/,/g, ''));
     } else if (activeTab === 'borrow') {
-      setAmount(formatTokenAmount(accountData.availableBorrowsUSD || 0n, 18));
+      setAmount(formatTokenAmount(accountData.availableBorrowsUSD || 0n, 18).replace(/,/g, ''));
     } else if (activeTab === 'repay') {
-      setAmount(formatTokenAmount(userDebt[selectedToken.symbol] || 0n, selectedToken.decimals));
+      setAmount(formatTokenAmount(userDebt[selectedToken.symbol] || 0n, selectedToken.decimals).replace(/,/g, ''));
     }
+  };
+
+  const isInsufficientBalance = () => {
+    if (!isConnected || !amount || !selectedToken || parseFloat(amount) <= 0) return false;
+    
+    if (activeTab === 'supply' || activeTab === 'repay') {
+      return parseFloat(amount) > parseFloat((balances[selectedToken.symbol] || '0').replace(/,/g, ''));
+    }
+    if (activeTab === 'withdraw') {
+      const supplied = formatTokenAmount(userCollateral[selectedToken.symbol] || 0n, selectedToken.decimals);
+      return parseFloat(amount) > parseFloat(supplied.replace(/,/g, ''));
+    }
+    if (activeTab === 'borrow') {
+      const availableUSD = Number(accountData.availableBorrowsUSD) / 1e18;
+      const amountUSD = parseFloat(amount) * (tokenPrices[selectedToken.symbol] || 0);
+      return amountUSD > availableUSD;
+    }
+    return false;
+  };
+
+  const getButtonText = () => {
+    if (loading) return 'Processing...';
+    if (!isConnected) return 'Connect Wallet';
+    if (!amount) return 'Enter Amount';
+    if (isInsufficientBalance()) return 'Insufficient Balance';
+    return activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
   };
 
   return (
@@ -270,14 +296,14 @@ const LendBorrow = () => {
       {/* Token Prices Display */}
       <div className="glass-card p-6">
         <h2 className="text-lg font-semibold mb-4 text-white">Token Prices</h2>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-3">
           {LENDABLE_TOKENS.map(token => (
-            <div key={token.symbol} className="flex items-center justify-between p-3 glass-card">
+            <div key={token.symbol} className="flex items-center justify-center gap-3 p-3 glass-card">
               <div className="flex items-center gap-2">
-                <img src={token.icon} alt={token.symbol} className="w-6 h-6 rounded-full" />
-                <span className="font-medium text-white">{token.symbol}</span>
+                <img src={token.icon} alt={token.symbol} className="w-5 h-5 rounded-full" />
+                <span className="text-sm font-medium text-white">{token.symbol}</span>
               </div>
-              <span className="font-semibold gradient-text">
+              <span className="text-sm font-semibold gradient-text">
                 {formatUSD(tokenPrices[token.symbol] || 0)}
               </span>
             </div>
@@ -322,7 +348,7 @@ const LendBorrow = () => {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-4 py-3 text-white pr-16"
+              className={`w-full bg-[#1a1a1a] border ${isInsufficientBalance() ? 'border-red-500/50 focus:border-red-500' : 'border-[#2a2a2a]'} rounded-lg px-4 py-3 text-white pr-16`}
             />
             <button
               onClick={setMaxAmount}
@@ -331,7 +357,7 @@ const LendBorrow = () => {
               MAX
             </button>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className={`text-xs mt-1 ${isInsufficientBalance() ? 'text-red-400' : 'text-gray-500'}`}>
             {activeTab === 'supply' && `Balance: ${balances[selectedToken.symbol] || '0.00'}`}
             {activeTab === 'withdraw' && `Supplied: ${formatTokenAmount(userCollateral[selectedToken.symbol] || 0n, selectedToken.decimals)}`}
             {activeTab === 'borrow' && `Available: ${formatUSD(Number(accountData.availableBorrowsUSD) / 1e18)}`}
@@ -346,10 +372,10 @@ const LendBorrow = () => {
             activeTab === 'borrow' ? handleBorrow :
             handleRepay
           }
-          disabled={!isConnected || !amount || loading}
+          disabled={!isConnected || !amount || loading || isInsufficientBalance()}
           className="w-full gradient-bg text-white py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity shadow-md"
         >
-          {loading ? 'Processing...' : isConnected ? activeTab.charAt(0).toUpperCase() + activeTab.slice(1) : 'Connect Wallet'}
+          {getButtonText()}
         </button>
       </div>
 

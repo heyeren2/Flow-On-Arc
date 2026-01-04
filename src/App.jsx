@@ -25,7 +25,7 @@ const config = getDefaultConfig({
 });
 
 function App() {
-  const isMaintenanceMode = true; // Set to false to disable maintenance mode
+  const isMaintenanceMode = false; // Set to false to disable maintenance mode
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
