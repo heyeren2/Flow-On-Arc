@@ -323,6 +323,8 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
+      <h1 className="text-3xl font-bold gradient-text">Dashboard</h1>
+      
       {/* Top Card: Total Portfolio Balance */}
       <div className="glass-card p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
