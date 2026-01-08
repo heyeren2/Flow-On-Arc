@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Bell, Rocket, Shield, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ChangelogModal = ({ isOpen, onClose }) => {
-  const [expandedVersion, setExpandedVersion] = useState('v1.4.1');
+  const [expandedVersion, setExpandedVersion] = useState('v1.4.2');
 
   // Handle escape key
   useEffect(() => {
@@ -16,6 +16,15 @@ const ChangelogModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const updates = [
+    {
+      version: "v1.4.2",
+      date: "January 8, 2026",
+      changes: [
+        { type: 'feature', text: 'Minimum Transaction Limits: Added $5 USD minimum for all token swaps and supply operations to avoid transaction spam of small amounts (e.g., 0.1 CAT to USDC).' },
+        { type: 'improvement', text: 'Dashboard UI: Added "Dashboard" title heading to match the consistent design across all pages.' },
+        { type: 'improvement', text: 'Input Validation: Enhanced swap and supply forms with real-time USD value validation and clear error messages.' }
+      ]
+    },
     {
       version: "v1.4.1",
       date: "January 5, 2026",

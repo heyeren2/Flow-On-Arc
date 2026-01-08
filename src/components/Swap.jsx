@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useEthersProvider, useEthersSigner } from '../hooks/useEthers';
 import { useBalances } from '../hooks/useBalances';
+import { useTokenPrices } from '../hooks/useTokenPrices';
 import { useNotifications } from './NotificationProvider';
 import { SWAPPABLE_TOKENS } from '../constants/tokens';
 import { getSwapAmountsOut, swapTokens, checkSwapAllowance, approveSwapToken, executeSwap } from '../services/swapService';
@@ -17,6 +18,7 @@ const Swap = () => {
   const provider = useEthersProvider();
   const signer = useEthersSigner();
   const { balances, fetchBalances } = useBalances(provider, address);
+  const { prices: tokenPrices } = useTokenPrices(provider);
   const { showTransaction } = useNotifications();
 
   const [fromToken, setFromToken] = useState(SWAPPABLE_TOKENS[0]);
@@ -104,13 +106,22 @@ const Swap = () => {
     setFromAmount((balances[fromToken.symbol] || '0').replace(/,/g, ''));
   };
 
+  const MINIMUM_SWAP_USD = 5;
+
   const isInsufficientBalance = isConnected && fromAmount && fromToken && parseFloat(fromAmount) > parseFloat((balances[fromToken.symbol] || '0').replace(/,/g, ''));
+
+  const isBelowMinimum = () => {
+    if (!isConnected || !fromAmount || !fromToken || !tokenPrices[fromToken.symbol]) return false;
+    const amountUSD = parseFloat(fromAmount) * (tokenPrices[fromToken.symbol] || 0);
+    return amountUSD > 0 && amountUSD < MINIMUM_SWAP_USD;
+  };
 
   const getButtonText = () => {
     if (swapping) return 'Swapping...';
     if (!isConnected) return 'Connect Wallet';
     if (!fromAmount || !toAmount) return 'Enter Amount';
     if (isInsufficientBalance) return 'Insufficient Balance';
+    if (isBelowMinimum()) return `Minimum $${MINIMUM_SWAP_USD}`;
     return 'Swap';
   };
 
@@ -138,7 +149,7 @@ const Swap = () => {
                 value={fromAmount}
                 onChange={(e) => setFromAmount(e.target.value)}
                 placeholder="0.00"
-                className={`w-full bg-[#1a1a1a] border ${isInsufficientBalance ? 'border-red-500/50 focus:border-red-500' : 'border-[#2a2a2a]'} rounded-lg px-4 py-3 text-white pr-16`}
+                className={`w-full bg-[#1a1a1a] border ${isInsufficientBalance || isBelowMinimum() ? 'border-red-500/50 focus:border-red-500' : 'border-[#2a2a2a]'} rounded-lg px-4 py-3 text-white pr-16`}
               />
               <button
                 onClick={setMaxAmount}
@@ -148,8 +159,11 @@ const Swap = () => {
               </button>
             </div>
           </div>
-          <p className={`text-xs mt-1 ${isInsufficientBalance ? 'text-red-400' : 'text-gray-500'}`}>
+          <p className={`text-xs mt-1 ${isInsufficientBalance || isBelowMinimum() ? 'text-red-400' : 'text-gray-500'}`}>
             Balance: {balances[fromToken.symbol] || '0.00'}
+            {isBelowMinimum() && tokenPrices[fromToken.symbol] && (
+              <span className="block mt-1">Minimum swap: ${MINIMUM_SWAP_USD} USD</span>
+            )}
           </p>
         </div>
 
@@ -190,7 +204,7 @@ const Swap = () => {
         {/* Swap Button */}
         <button
           onClick={handleSwap}
-          disabled={!isConnected || !fromAmount || !toAmount || swapping || isInsufficientBalance}
+          disabled={!isConnected || !fromAmount || !toAmount || swapping || isInsufficientBalance || isBelowMinimum()}
           className="w-full gradient-bg text-white py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity shadow-md"
         >
           {getButtonText()}

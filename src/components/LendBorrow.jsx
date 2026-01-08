@@ -54,6 +54,8 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
   const [userCollateral, setUserCollateral] = useState({});
   const [userDebt, setUserDebt] = useState({});
 
+  const MINIMUM_SUPPLY_USD = 5;
+
   useEffect(() => {
     if (provider && address) {
       fetchAccountData();
@@ -241,11 +243,19 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
     return false;
   };
 
+  const isBelowMinimum = () => {
+    if (activeTab !== 'supply') return false; // Only apply to supply
+    if (!isConnected || !amount || !selectedToken || !tokenPrices[selectedToken.symbol]) return false;
+    const amountUSD = parseFloat(amount) * (tokenPrices[selectedToken.symbol] || 0);
+    return amountUSD > 0 && amountUSD < MINIMUM_SUPPLY_USD;
+  };
+
   const getButtonText = () => {
     if (loading) return 'Processing...';
     if (!isConnected) return 'Connect Wallet';
     if (!amount) return 'Enter Amount';
     if (isInsufficientBalance()) return 'Insufficient Balance';
+    if (isBelowMinimum()) return `Minimum $${MINIMUM_SUPPLY_USD}`;
     return activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
   };
 
@@ -355,7 +365,7 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className={`w-full bg-[#1a1a1a] border ${isInsufficientBalance() ? 'border-red-500/50 focus:border-red-500' : 'border-[#2a2a2a]'} rounded-lg px-4 py-3 text-white pr-16`}
+              className={`w-full bg-[#1a1a1a] border ${isInsufficientBalance() || isBelowMinimum() ? 'border-red-500/50 focus:border-red-500' : 'border-[#2a2a2a]'} rounded-lg px-4 py-3 text-white pr-16`}
             />
             <button
               onClick={setMaxAmount}
@@ -364,11 +374,14 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
               MAX
             </button>
           </div>
-          <p className={`text-xs mt-1 ${isInsufficientBalance() ? 'text-red-400' : 'text-gray-500'}`}>
+          <p className={`text-xs mt-1 ${isInsufficientBalance() || isBelowMinimum() ? 'text-red-400' : 'text-gray-500'}`}>
             {activeTab === 'supply' && `Balance: ${balances[selectedToken.symbol] || '0.00'}`}
             {activeTab === 'withdraw' && `Supplied: ${formatTokenAmount(userCollateral[selectedToken.symbol] || 0n, selectedToken.decimals)}`}
             {activeTab === 'borrow' && `Available: ${formatUSD(Number(accountData.availableBorrowsUSD) / 1e18)}`}
             {activeTab === 'repay' && `Borrowed: ${formatTokenAmount(userDebt[selectedToken.symbol] || 0n, selectedToken.decimals)}`}
+            {isBelowMinimum() && tokenPrices[selectedToken.symbol] && (
+              <span className="block mt-1">Minimum supply: ${MINIMUM_SUPPLY_USD} USD</span>
+            )}
           </p>
         </div>
 
@@ -379,7 +392,7 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
             activeTab === 'borrow' ? handleBorrow :
             handleRepay
           }
-          disabled={!isConnected || !amount || loading || isInsufficientBalance()}
+          disabled={!isConnected || !amount || loading || isInsufficientBalance() || isBelowMinimum()}
           className="w-full gradient-bg text-white py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity shadow-md"
         >
           {getButtonText()}
