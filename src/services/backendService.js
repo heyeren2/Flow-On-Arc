@@ -3,7 +3,7 @@
 const BACKEND_URL = 'https://dapp-backend-blue-bush-5535.fly.dev';
 
 /**
- * Fetch protocol statistics from backend
+ ** Fetch protocol statistics from backend
  */
 export async function fetchBackendStats() {
   try {

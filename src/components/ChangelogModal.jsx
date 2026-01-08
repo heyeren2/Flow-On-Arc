@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Bell, Rocket, Shield, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ChangelogModal = ({ isOpen, onClose }) => {
-  const [expandedVersion, setExpandedVersion] = useState('v1.4.0');
+  const [expandedVersion, setExpandedVersion] = useState('v1.4.1');
 
   // Handle escape key
   useEffect(() => {
@@ -16,6 +16,14 @@ const ChangelogModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const updates = [
+    {
+      version: "v1.4.1",
+      date: "January 5, 2026",
+      changes: [
+        { type: 'improvement', text: 'Code Cleanup: Removed debugging code and restored clean, production-ready implementation for better maintainability.' },
+        { type: 'improvement', text: 'Simplified Error Handling: Streamlined backend service error handling for more reliable data fetching.' }
+      ]
+    },
     {
       version: "v1.4.0",
       date: "January 5, 2026",

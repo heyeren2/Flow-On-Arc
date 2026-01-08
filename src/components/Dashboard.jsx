@@ -33,7 +33,7 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
     USDC: 1.0,
   };
 
-  // Fetch supplied and borrowed tokens
+  // Fetch supplied and borrowed tokenss
   useEffect(() => {
     if (provider && address) {
       const fetchData = async () => {

@@ -50,7 +50,7 @@ const Activity = () => {
   useEffect(() => {
     fetchTransactions();
     
-    // Refresh every 30 seconds
+    // Refresh every 30 second
     const interval = setInterval(fetchTransactions, 30000);
     return () => clearInterval(interval);
   }, [fetchTransactions]);

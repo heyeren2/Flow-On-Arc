@@ -6,7 +6,7 @@ import { fetchBackendStats } from './backendService';
 
 // ========== CACHING CONFIGURATION ==========
 
-// Cache for storing last known good values
+// Cache for storing last known good valuess
 const statsCache = {
   tvl: null,
   volume: null,
