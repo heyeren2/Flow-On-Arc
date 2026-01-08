@@ -5,7 +5,7 @@ A DeFi dApp on Arc Network featuring token swapping, lending/borrowing, and a ti
 ## Features
 
 - **Dashboard**: View your portfolio and token balances
-- **Swap**: Swap between CAT, DARC, and PANDA tokens
+- **Swap**: Swap between USDC, CAT, DARC, and PANDA tokens
 - **Lend/Borrow**: Supply collateral, withdraw, borrow, and repay tokens
 - **Faucet**: Claim test tokens based on your USDC balance tier
 - **Activity**: View your transaction history
