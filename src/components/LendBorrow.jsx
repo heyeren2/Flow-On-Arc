@@ -365,6 +365,44 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
     }
   };
 
+  const setPercentageAmount = (percentage) => {
+    if (!selectedToken) return;
+    
+    let maxAmount = 0;
+    let maxAmountFormatted = '0';
+    
+    if (activeTab === 'supply') {
+      // Use wallet balance
+      maxAmountFormatted = (balances[selectedToken.symbol] || '0').replace(/,/g, '');
+      maxAmount = parseFloat(maxAmountFormatted);
+    } else if (activeTab === 'withdraw') {
+      // Use max withdrawable
+      const maxWithdrawable = getMaxWithdrawable(selectedToken);
+      maxAmountFormatted = formatTokenAmount(maxWithdrawable, selectedToken.decimals);
+      maxAmount = parseFloat(maxAmountFormatted.replace(/,/g, ''));
+    } else if (activeTab === 'borrow') {
+      // Use available borrow in token
+      const available = getAvailableBorrowInToken();
+      maxAmountFormatted = available.replace(/,/g, '');
+      maxAmount = parseFloat(maxAmountFormatted);
+    } else if (activeTab === 'repay') {
+      // Use debt amount
+      maxAmountFormatted = formatTokenAmount(userDebt[selectedToken.symbol] || 0n, selectedToken.decimals);
+      maxAmount = parseFloat(maxAmountFormatted.replace(/,/g, ''));
+    }
+    
+    if (maxAmount <= 0) return;
+    
+    // Calculate percentage amount
+    const percentageAmount = (maxAmount * percentage) / 100;
+    
+    // Format to appropriate decimal places based on token decimals
+    const decimals = selectedToken.decimals;
+    const formattedAmount = percentageAmount.toFixed(decimals === 6 ? 2 : 6).replace(/\.?0+$/, '');
+    
+    setAmount(formattedAmount);
+  };
+
   const isInsufficientBalance = () => {
     if (!isConnected || !amount || !selectedToken || parseFloat(amount) <= 0) return false;
     
@@ -522,7 +560,22 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
               MAX
             </button>
           </div>
-          <p className={`text-xs mt-1 ${isInsufficientBalance() || isBelowMinimum() ? 'text-red-400' : 'text-gray-500'}`}>
+          
+          {/* Percentage Buttons */}
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-gray-500">Quick:</span>
+            {[20, 50, 100].map((percent) => (
+              <button
+                key={percent}
+                onClick={() => setPercentageAmount(percent)}
+                className="px-3 py-1 text-xs font-medium rounded-lg bg-[#1a1a1a] hover:bg-[#252525] text-gray-400 hover:text-white transition-colors border border-[#2a2a2a] hover:border-[#5a8a3a]/30 min-h-[28px]"
+              >
+                {percent === 100 ? 'MAX' : `${percent}%`}
+              </button>
+            ))}
+          </div>
+          
+          <p className={`text-xs mt-2 ${isInsufficientBalance() || isBelowMinimum() ? 'text-red-400' : 'text-gray-500'}`}>
             {activeTab === 'supply' && `Balance: ${balances[selectedToken.symbol] || '0.00'}`}
             {activeTab === 'withdraw' && (
               <>

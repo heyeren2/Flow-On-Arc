@@ -106,6 +106,25 @@ const Swap = () => {
     setFromAmount((balances[fromToken.symbol] || '0').replace(/,/g, ''));
   };
 
+  const setPercentageAmount = (percentage) => {
+    if (!fromToken) return;
+    
+    // Get wallet balance for fromToken
+    const balanceStr = (balances[fromToken.symbol] || '0').replace(/,/g, '');
+    const balance = parseFloat(balanceStr);
+    
+    if (balance <= 0) return;
+    
+    // Calculate percentage amount
+    const percentageAmount = (balance * percentage) / 100;
+    
+    // Format to appropriate decimal places based on token decimals
+    const decimals = fromToken.decimals;
+    const formattedAmount = percentageAmount.toFixed(decimals === 6 ? 2 : 6).replace(/\.?0+$/, '');
+    
+    setFromAmount(formattedAmount);
+  };
+
   const MINIMUM_SWAP_USD = 5;
 
   const isInsufficientBalance = isConnected && fromAmount && fromToken && parseFloat(fromAmount) > parseFloat((balances[fromToken.symbol] || '0').replace(/,/g, ''));
@@ -147,7 +166,11 @@ const Swap = () => {
               <input
                 type="number"
                 value={fromAmount}
-                onChange={(e) => setFromAmount(e.target.value)}
+                onChange={(e) => {
+                  // Remove any commas and ensure only numbers and decimal point
+                  const cleaned = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '');
+                  setFromAmount(cleaned);
+                }}
                 placeholder="0.00"
                 className={`w-full bg-[#1a1a1a] border ${isInsufficientBalance || isBelowMinimum() ? 'border-red-500/50 focus:border-red-500' : 'border-[#2a2a2a]'} rounded-lg px-4 py-3 text-white pr-16`}
               />
@@ -159,7 +182,22 @@ const Swap = () => {
               </button>
             </div>
           </div>
-          <p className={`text-xs mt-1 ${isInsufficientBalance || isBelowMinimum() ? 'text-red-400' : 'text-gray-500'}`}>
+          
+          {/* Percentage Buttons */}
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-gray-500">Quick:</span>
+            {[20, 50, 100].map((percent) => (
+              <button
+                key={percent}
+                onClick={() => setPercentageAmount(percent)}
+                className="px-3 py-1 text-xs font-medium rounded-lg bg-[#1a1a1a] hover:bg-[#252525] text-gray-400 hover:text-white transition-colors border border-[#2a2a2a] hover:border-[#5a8a3a]/30 min-h-[28px]"
+              >
+                {percent === 100 ? 'MAX' : `${percent}%`}
+              </button>
+            ))}
+          </div>
+          
+          <p className={`text-xs mt-2 ${isInsufficientBalance || isBelowMinimum() ? 'text-red-400' : 'text-gray-500'}`}>
             Balance: {balances[fromToken.symbol] || '0.00'}
             {isBelowMinimum() && tokenPrices[fromToken.symbol] && (
               <span className="block mt-1">Minimum swap: ${MINIMUM_SWAP_USD} USD</span>
