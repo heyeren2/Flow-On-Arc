@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Bell, Rocket, Shield, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ChangelogModal = ({ isOpen, onClose }) => {
-  const [expandedVersion, setExpandedVersion] = useState('v1.4.3');
+  const [expandedVersion, setExpandedVersion] = useState('v1.4.4');
 
   // Handle escape key
   useEffect(() => {
@@ -16,6 +16,20 @@ const ChangelogModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const updates = [
+    {
+      version: "v1.4.4",
+      date: "January 9, 2026",
+      changes: [
+        { type: 'feature', text: 'Mobile-First Responsive Design: Complete mobile optimization with hamburger menu, responsive sidebar drawer, and adaptive layouts for phones, tablets, and desktops.' },
+        { type: 'improvement', text: 'Mobile Navigation: Added hamburger menu with slide-in drawer sidebar on mobile devices. Sidebar automatically closes when navigating to a new page.' },
+        { type: 'improvement', text: 'Text Overflow Prevention: Fixed all text overflow issues with proper truncation, responsive font sizes, and flexible layouts. Text now fits perfectly within cards on all screen sizes.' },
+        { type: 'improvement', text: 'Touch-Friendly Interface: All buttons optimized for better mobile usability with improved spacing and padding throughout the app.' },
+        { type: 'improvement', text: 'Responsive Grid Layouts: All components now use adaptive grids (1 column mobile → 2 columns tablet → 3+ columns desktop) for optimal viewing on any device.' },
+        { type: 'improvement', text: 'Mobile-Optimized Components: Dashboard, Activity, Swap, LendBorrow, and ProtocolStats components fully optimized with responsive typography, flexible layouts, and mobile-specific improvements.' },
+        { type: 'fix', text: 'Fixed fixed margins and spacing issues on mobile. Removed desktop-only margins that were breaking mobile layouts.' },
+        { type: 'fix', text: 'Fixed floating buttons overlapping content on mobile by hiding them on small screens. Buttons remain visible on desktop for easy access.' }
+      ]
+    },
     {
       version: "v1.4.3",
       date: "January 9, 2026",
