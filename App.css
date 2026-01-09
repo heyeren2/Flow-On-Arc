@@ -1,0 +1,170 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #000000;
+  color: #ffffff;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Black background */
+.geometric-pattern {
+  background-color: #000000;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #5a8a3a 0%, #4a7c2a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #5a8a3a 0%, #4a7c2a 100%);
+}
+
+.gradient-bg-orange {
+  background: linear-gradient(135deg, #5a8a3a 0%, #4a7c2a 100%);
+}
+
+.gradient-border {
+  border-image: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%) 1;
+}
+
+/* Sophisticated minimal card design - Premium fintech aesthetic */
+.glass-card {
+  background: rgba(17, 17, 17, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(90, 138, 58, 0.08);
+  border-radius: 12px;
+  box-shadow: 
+    0 2px 8px 0 rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(90, 138, 58, 0.05),
+    0 0 12px rgba(90, 138, 58, 0.03);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.glass-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 
+    0 4px 12px 0 rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(90, 138, 58, 0.12),
+    0 0 16px rgba(90, 138, 58, 0.05);
+  border-color: rgba(90, 138, 58, 0.15);
+}
+
+/* Card shadow styling (legacy - keeping for compatibility) */
+.card-shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.card-shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2a2a2a;
+}
+
+/* Custom Scrollbar class */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #0a0a0a !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #2a2a2a !important;
+  border-radius: 10px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a !important;
+}
+
+/* Firefox support */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a2a #0a0a0a;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+@keyframes progress {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.animate-progress {
+  animation: progress linear forwards;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
