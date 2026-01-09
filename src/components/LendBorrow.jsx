@@ -66,11 +66,12 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
   useEffect(() => {
     const checkApproval = async () => {
       if (provider && address && amount && selectedToken && (activeTab === 'supply' || activeTab === 'repay')) {
+        const cleanedAmount = amount.toString().replace(/,/g, '').trim();
         if (activeTab === 'supply') {
-          const hasAllowance = await checkSupplyAllowance(provider, address, selectedToken, amount);
+          const hasAllowance = await checkSupplyAllowance(provider, address, selectedToken, cleanedAmount);
           setRequiresApproval(!hasAllowance);
         } else if (activeTab === 'repay') {
-          const hasAllowance = await checkRepayAllowance(provider, address, selectedToken, amount);
+          const hasAllowance = await checkRepayAllowance(provider, address, selectedToken, cleanedAmount);
           setRequiresApproval(!hasAllowance);
         }
       } else {
@@ -172,28 +173,41 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
 
   const handleApproveSupply = async () => {
     if (!signer || !amount || !selectedToken) return;
-    return await approveSupplyToken(signer, selectedToken, amount);
+    const cleanedAmount = amount.toString().replace(/,/g, '').trim();
+    return await approveSupplyToken(signer, selectedToken, cleanedAmount);
   };
 
   const handleExecuteSupply = async () => {
     if (!signer || !amount || !selectedToken) return;
-    const tx = await executeSupply(signer, selectedToken, amount);
     
-    await showTransaction('supply', Promise.resolve(tx), {
-      pendingMessage: `Supplying ${amount} ${selectedToken.symbol}...`,
-      successMessage: `Successfully supplied ${amount} ${selectedToken.symbol}`,
-      transactionData: {
-        token: selectedToken.symbol,
-        amount: amount,
-      },
-    });
+    // Clean the amount: remove commas and ensure it's a valid number
+    const cleanedAmount = amount.toString().replace(/,/g, '').trim();
+    if (!cleanedAmount || isNaN(parseFloat(cleanedAmount)) || parseFloat(cleanedAmount) <= 0) {
+      throw new Error('Invalid amount');
+    }
     
-    setAmount('');
-    fetchAccountData();
-    fetchBalances();
-    // Modal will auto-close after 5 seconds showing confirmation
-    
-    return tx;
+    try {
+      const tx = await executeSupply(signer, selectedToken, cleanedAmount);
+      
+      await showTransaction('supply', Promise.resolve(tx), {
+        pendingMessage: `Supplying ${cleanedAmount} ${selectedToken.symbol}...`,
+        successMessage: `Successfully supplied ${cleanedAmount} ${selectedToken.symbol}`,
+        transactionData: {
+          token: selectedToken.symbol,
+          amount: cleanedAmount,
+        },
+      });
+      
+      setAmount('');
+      fetchAccountData();
+      fetchBalances();
+      // Modal will auto-close after 5 seconds showing confirmation
+      
+      return tx;
+    } catch (error) {
+      console.error('Supply error:', error);
+      throw error;
+    }
   };
 
   const handleWithdraw = async () => {
@@ -203,23 +217,41 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
 
   const handleExecuteWithdraw = async () => {
     if (!signer || !amount || !selectedToken) return;
-    const tx = await withdrawCollateral(signer, selectedToken, amount);
     
-    await showTransaction('withdraw', Promise.resolve(tx), {
-      pendingMessage: `Withdrawing ${amount} ${selectedToken.symbol}...`,
-      successMessage: `Successfully withdrew ${amount} ${selectedToken.symbol}`,
-      transactionData: {
-        token: selectedToken.symbol,
-        amount: amount,
-      },
-    });
+    // Clean the amount: remove commas and ensure it's a valid number
+    const cleanedAmount = amount.toString().replace(/,/g, '').trim();
+    if (!cleanedAmount || isNaN(parseFloat(cleanedAmount)) || parseFloat(cleanedAmount) <= 0) {
+      throw new Error('Invalid amount');
+    }
     
-    setAmount('');
-    fetchAccountData();
-    fetchBalances();
-    // Modal will auto-close after 5 seconds showing confirmation
-    
-    return tx;
+    try {
+      const tx = await withdrawCollateral(signer, selectedToken, cleanedAmount);
+      
+      await showTransaction('withdraw', Promise.resolve(tx), {
+        pendingMessage: `Withdrawing ${cleanedAmount} ${selectedToken.symbol}...`,
+        successMessage: `Successfully withdrew ${cleanedAmount} ${selectedToken.symbol}`,
+        transactionData: {
+          token: selectedToken.symbol,
+          amount: cleanedAmount,
+        },
+      });
+      
+      setAmount('');
+      fetchAccountData();
+      fetchBalances();
+      // Modal will auto-close after 5 seconds showing confirmation
+      
+      return tx;
+    } catch (error) {
+      console.error('Withdraw error:', error);
+      // Re-throw with a user-friendly message
+      if (error.message?.includes('liquidation') || error.message?.includes('health factor')) {
+        throw new Error('Withdrawal would cause liquidation. Please reduce the amount.');
+      } else if (error.message?.includes('Insufficient collateral')) {
+        throw new Error('Insufficient collateral available for withdrawal.');
+      }
+      throw error;
+    }
   };
 
   const handleBorrow = async () => {
@@ -229,23 +261,41 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
 
   const handleExecuteBorrow = async () => {
     if (!signer || !amount || !selectedToken) return;
-    const tx = await borrowTokens(signer, selectedToken, amount);
     
-    await showTransaction('borrow', Promise.resolve(tx), {
-      pendingMessage: `Borrowing ${amount} ${selectedToken.symbol}...`,
-      successMessage: `Successfully borrowed ${amount} ${selectedToken.symbol}`,
-      transactionData: {
-        token: selectedToken.symbol,
-        amount: amount,
-      },
-    });
+    // Clean the amount: remove commas and ensure it's a valid number
+    const cleanedAmount = amount.toString().replace(/,/g, '').trim();
+    if (!cleanedAmount || isNaN(parseFloat(cleanedAmount)) || parseFloat(cleanedAmount) <= 0) {
+      throw new Error('Invalid amount');
+    }
     
-    setAmount('');
-    fetchAccountData();
-    fetchBalances();
-    // Modal will auto-close after 5 seconds showing confirmation
-    
-    return tx;
+    try {
+      const tx = await borrowTokens(signer, selectedToken, cleanedAmount);
+      
+      await showTransaction('borrow', Promise.resolve(tx), {
+        pendingMessage: `Borrowing ${cleanedAmount} ${selectedToken.symbol}...`,
+        successMessage: `Successfully borrowed ${cleanedAmount} ${selectedToken.symbol}`,
+        transactionData: {
+          token: selectedToken.symbol,
+          amount: cleanedAmount,
+        },
+      });
+      
+      setAmount('');
+      fetchAccountData();
+      fetchBalances();
+      // Modal will auto-close after 5 seconds showing confirmation
+      
+      return tx;
+    } catch (error) {
+      console.error('Borrow error:', error);
+      // Re-throw with a user-friendly message
+      if (error.message?.includes('Insufficient collateral')) {
+        throw new Error('Insufficient collateral available for borrowing.');
+      } else if (error.message?.includes('availableBorrowsUSD')) {
+        throw new Error('Amount exceeds available borrowing capacity.');
+      }
+      throw error;
+    }
   };
 
   const handleRepay = async () => {
@@ -255,41 +305,63 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
 
   const handleApproveRepay = async () => {
     if (!signer || !amount || !selectedToken) return;
-    return await approveRepayToken(signer, selectedToken, amount);
+    const cleanedAmount = amount.toString().replace(/,/g, '').trim();
+    return await approveRepayToken(signer, selectedToken, cleanedAmount);
   };
 
   const handleExecuteRepay = async () => {
     if (!signer || !amount || !selectedToken) return;
-    const tx = await executeRepay(signer, selectedToken, amount);
     
-    await showTransaction('repay', Promise.resolve(tx), {
-      pendingMessage: `Repaying ${amount} ${selectedToken.symbol}...`,
-      successMessage: `Successfully repaid ${amount} ${selectedToken.symbol}`,
-      transactionData: {
-        token: selectedToken.symbol,
-        amount: amount,
-      },
-    });
+    // Clean the amount: remove commas and ensure it's a valid number
+    const cleanedAmount = amount.toString().replace(/,/g, '').trim();
+    if (!cleanedAmount || isNaN(parseFloat(cleanedAmount)) || parseFloat(cleanedAmount) <= 0) {
+      throw new Error('Invalid amount');
+    }
     
-    setAmount('');
-    fetchAccountData();
-    fetchBalances();
-    // Modal will auto-close after 5 seconds showing confirmation
-    
-    return tx;
+    try {
+      const tx = await executeRepay(signer, selectedToken, cleanedAmount);
+      
+      await showTransaction('repay', Promise.resolve(tx), {
+        pendingMessage: `Repaying ${cleanedAmount} ${selectedToken.symbol}...`,
+        successMessage: `Successfully repaid ${cleanedAmount} ${selectedToken.symbol}`,
+        transactionData: {
+          token: selectedToken.symbol,
+          amount: cleanedAmount,
+        },
+      });
+      
+      setAmount('');
+      fetchAccountData();
+      fetchBalances();
+      // Modal will auto-close after 5 seconds showing confirmation
+      
+      return tx;
+    } catch (error) {
+      console.error('Repay error:', error);
+      // Re-throw with a user-friendly message
+      if (error.message?.includes('Repay exceeds debt')) {
+        throw new Error('Repayment amount exceeds your debt.');
+      }
+      throw error;
+    }
   };
 
   const setMaxAmount = () => {
     if (activeTab === 'supply') {
-      setAmount((balances[selectedToken.symbol] || '0').replace(/,/g, ''));
+      const balance = (balances[selectedToken.symbol] || '0').replace(/,/g, '');
+      setAmount(balance);
     } else if (activeTab === 'withdraw') {
       const maxWithdrawable = getMaxWithdrawable(selectedToken);
-      setAmount(formatTokenAmount(maxWithdrawable, selectedToken.decimals).replace(/,/g, ''));
+      const formatted = formatTokenAmount(maxWithdrawable, selectedToken.decimals);
+      // Remove commas when setting amount
+      setAmount(formatted.replace(/,/g, ''));
     } else if (activeTab === 'borrow') {
       // Show available borrow in selected token, not USD
-      setAmount(getAvailableBorrowInToken().replace(/,/g, ''));
+      const available = getAvailableBorrowInToken();
+      setAmount(available.replace(/,/g, ''));
     } else if (activeTab === 'repay') {
-      setAmount(formatTokenAmount(userDebt[selectedToken.symbol] || 0n, selectedToken.decimals).replace(/,/g, ''));
+      const debt = formatTokenAmount(userDebt[selectedToken.symbol] || 0n, selectedToken.decimals);
+      setAmount(debt.replace(/,/g, ''));
     }
   };
 
@@ -435,7 +507,11 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
             <input
               type="number"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                // Remove any commas and ensure only numbers and decimal point
+                const cleaned = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '');
+                setAmount(cleaned);
+              }}
               placeholder="0.00"
               className={`w-full bg-[#1a1a1a] border ${isInsufficientBalance() || isBelowMinimum() ? 'border-red-500/50 focus:border-red-500' : 'border-[#2a2a2a]'} rounded-lg px-4 py-3 text-white pr-16`}
             />
