@@ -33,8 +33,8 @@ npm run dev
 The dApp integrates with three main contracts:
 
 1. **FlowOnArcFaucet**: Tier-based token faucet with cooldown periods
-2. **SwapRouter**: AMM-style token swap router
-3. **ImprovedLendingPool**: Lending and borrowing protocol
+2. **FlowSwapRouter**: AMM-style token swap router
+3. **FlowLendingPool**: Lending and borrowing protocol
 
 ## Network
 
