@@ -75,7 +75,6 @@ const ChangelogModal = ({ isOpen, onClose }) => {
       version: "v1.4.0",
       date: "January 5, 2026",
       changes: [
-        { type: 'feature', text: 'Backend API Integration: Deployed dedicated backend on Fly.io with PostgreSQL for persistent data tracking.' },
         { type: 'feature', text: 'Real-time Event Indexer: Backend automatically indexes all swap, supply, borrow, repay, withdraw, and faucet transactions.' },
         { type: 'feature', text: 'Activity Tab: Live transaction feed showing all protocol activity with type filters and block explorer links.' },
         { type: 'feature', text: 'Transaction History API: New endpoints for fetching protocol-wide and wallet-specific transaction history.' },

@@ -5,9 +5,9 @@ import { useBalances } from '../hooks/useBalances';
 import { useTokenPrices } from '../hooks/useTokenPrices';
 import { useNotifications } from './NotificationProvider';
 import { SWAPPABLE_TOKENS } from '../constants/tokens';
-import { getSwapAmountsOut, swapTokens, checkSwapAllowance, approveSwapToken, executeSwap } from '../services/swapService';
-import { formatTokenAmount } from '../utils/formatters';
-import { ArrowDownUp } from 'lucide-react';
+import { getSwapAmountsOut, swapTokens, checkSwapAllowance, approveSwapToken, executeSwap, calculatePriceImpact, getSpotExchangeRate } from '../services/swapService';
+import { formatTokenAmount, formatUSD } from '../utils/formatters';
+import { ArrowDownUp, AlertTriangle, TrendingUp } from 'lucide-react';
 import TokenSelector from './TokenSelector';
 import PriceChart from './PriceChart';
 import TransactionModal from './TransactionModal';
@@ -29,11 +29,35 @@ const Swap = () => {
   const [swapping, setSwapping] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [requiresApproval, setRequiresApproval] = useState(true);
+  const [priceImpact, setPriceImpact] = useState(null);
+  const [loadingPriceImpact, setLoadingPriceImpact] = useState(false);
+  const [spotExchangeRate, setSpotExchangeRate] = useState(null);
+
+  // Calculate spot exchange rate when tokens change (not when amount changes)
+  useEffect(() => {
+    if (fromToken && toToken && provider) {
+      const fetchSpotRate = async () => {
+        try {
+          const rate = await getSpotExchangeRate(provider, fromToken, toToken);
+          setSpotExchangeRate(rate);
+        } catch (error) {
+          console.error('Error fetching spot rate:', error);
+          setSpotExchangeRate(null);
+        }
+      };
+      fetchSpotRate();
+    } else {
+      setSpotExchangeRate(null);
+    }
+  }, [fromToken, toToken, provider]); // Only recalculate when tokens change
 
   useEffect(() => {
     if (fromAmount && fromToken && toToken && provider) {
       const updateAmounts = async () => {
         try {
+          setLoadingPriceImpact(true);
+          
+          // Calculate output amount
           const amountOut = await getSwapAmountsOut(
             provider,
             fromAmount,
@@ -41,14 +65,27 @@ const Swap = () => {
             toToken
           );
           setToAmount(formatTokenAmount(amountOut, toToken.decimals));
+          
+          // Calculate price impact based on pool reserves
+          const impact = await calculatePriceImpact(
+            provider,
+            fromAmount,
+            fromToken,
+            toToken
+          );
+          setPriceImpact(impact);
         } catch (error) {
           console.error('Error calculating swap:', error);
           setToAmount('0.00');
+          setPriceImpact(null);
+        } finally {
+          setLoadingPriceImpact(false);
         }
       };
       updateAmounts();
     } else {
       setToAmount('');
+      setPriceImpact(null);
     }
   }, [fromAmount, fromToken, toToken, provider]);
 
@@ -141,8 +178,32 @@ const Swap = () => {
     if (!fromAmount || !toAmount) return 'Enter Amount';
     if (isInsufficientBalance) return 'Insufficient Balance';
     if (isBelowMinimum()) return `Minimum $${MINIMUM_SWAP_USD}`;
+    if (loadingPriceImpact) return 'Calculating...';
     return 'Swap';
   };
+
+  // Helper function to get price impact display info
+  const getPriceImpactDisplay = () => {
+    if (!priceImpact || priceImpact.error || priceImpact.priceImpact === null || priceImpact.priceImpact === undefined) {
+      return null;
+    }
+
+    const impact = priceImpact.priceImpact;
+    
+    if (impact < 0.1) {
+      return { color: 'text-green-400', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30', label: 'Very Low', value: impact };
+    } else if (impact < 0.5) {
+      return { color: 'text-green-300', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30', label: 'Low', value: impact };
+    } else if (impact < 1) {
+      return { color: 'text-yellow-400', bgColor: 'bg-yellow-500/10', borderColor: 'border-yellow-500/30', label: 'Medium', value: impact };
+    } else if (impact < 3) {
+      return { color: 'text-orange-400', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/30', label: 'High', value: impact };
+    } else {
+      return { color: 'text-red-400', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30', label: 'Very High', value: impact };
+    }
+  };
+
+  const priceImpactDisplay = getPriceImpactDisplay();
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -239,14 +300,127 @@ const Swap = () => {
           </p>
         </div>
 
+        {/* Price Impact & Liquidity Info */}
+        {fromAmount && parseFloat(fromAmount) > 0 && (
+          <div className="space-y-3">
+            {/* Price Impact Display */}
+            {loadingPriceImpact ? (
+              <div className="p-3 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a]">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-[#5a8a3a] border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs text-gray-400">Calculating price impact...</span>
+                </div>
+              </div>
+            ) : priceImpactDisplay ? (
+              <div className={`p-3 rounded-lg border ${priceImpactDisplay.bgColor} ${priceImpactDisplay.borderColor}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle 
+                      className={`w-4 h-4 ${
+                        priceImpactDisplay.value > 1 ? 'text-red-400' : priceImpactDisplay.value > 0.5 ? 'text-orange-400' : 'text-green-400'
+                      }`} 
+                    />
+                    <span className="text-xs text-gray-400">Price Impact</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-semibold ${priceImpactDisplay.color}`}>
+                      {priceImpactDisplay.value.toFixed(2)}%
+                    </span>
+                    <span className="text-xs text-gray-500">({priceImpactDisplay.label})</span>
+                  </div>
+                </div>
+                
+                {/* Warnings for high impact */}
+                {priceImpactDisplay.value > 3 && (
+                  <p className="text-xs text-red-400 mt-2 flex items-start gap-1">
+                    <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                    <span>Very high price impact. Consider splitting your swap into smaller transactions or adding liquidity to reduce impact.</span>
+                  </p>
+                )}
+                {priceImpactDisplay.value > 1 && priceImpactDisplay.value <= 3 && (
+                  <p className="text-xs text-orange-400 mt-2 flex items-start gap-1">
+                    <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                    <span>High price impact. You may want to split this swap or wait for more liquidity.</span>
+                  </p>
+                )}
+              </div>
+            ) : null}
+
+            {/* Swap Size Info - Simplified (detailed reserves will be on Liquidity page) */}
+            {priceImpact && !priceImpact.error && priceImpact.swapSizePercent !== undefined && (
+              <div className="p-3 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-[#5cb849]" />
+                    <span className="text-xs text-gray-400">Swap Size</span>
+                  </div>
+                  <span className={`text-xs font-medium ${
+                    priceImpact.swapSizePercent > 10 ? 'text-red-400' :
+                    priceImpact.swapSizePercent > 5 ? 'text-orange-400' :
+                    'text-green-400'
+                  }`}>
+                    {priceImpact.swapSizePercent > 0 ? priceImpact.swapSizePercent.toFixed(2) : '<0.01'}% of pool
+                  </span>
+                </div>
+                {priceImpact.liquidityDepth !== undefined && priceImpact.liquidityDepth > 0 && priceImpact.liquidityDepth < 1000 && (
+                  <p className="text-xs text-yellow-400 mt-2 flex items-start gap-1">
+                    <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                    <span>Low liquidity pool. Consider adding liquidity to improve swap rates for everyone.</span>
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Exchange Rate - Show stable spot rate */}
+            {spotExchangeRate !== null && spotExchangeRate !== undefined ? (
+              <div className="p-3 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a]">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-400">Exchange Rate</span>
+                  <span className="text-white font-medium">
+                    1 {fromToken.symbol} = {spotExchangeRate.toFixed(6)} {toToken.symbol}
+                  </span>
+                </div>
+              </div>
+            ) : fromAmount && toAmount && parseFloat(fromAmount) > 0 && parseFloat(toAmount) > 0 ? (
+              <div className="p-3 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a]">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-400">Exchange Rate</span>
+                  <span className="text-xs text-gray-500">Calculating...</span>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+
         {/* Swap Button */}
         <button
           onClick={handleSwap}
-          disabled={!isConnected || !fromAmount || !toAmount || swapping || isInsufficientBalance || isBelowMinimum()}
-          className="w-full gradient-bg text-white py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity shadow-md"
+          disabled={!isConnected || !fromAmount || !toAmount || swapping || isInsufficientBalance || isBelowMinimum() || loadingPriceImpact}
+          className="w-full gradient-bg text-white py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity shadow-md min-h-[44px]"
         >
           {getButtonText()}
         </button>
+        
+        {/* Add Liquidity CTA for low liquidity pools */}
+        {priceImpact && priceImpact.liquidityDepth !== undefined && priceImpact.liquidityDepth > 0 && priceImpact.liquidityDepth < 1000 && (
+          <div className="p-3 rounded-lg bg-[#5a8a3a]/10 border border-[#5a8a3a]/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-[#5cb849] font-medium mb-1">💡 Help Improve Liquidity</p>
+                <p className="text-xs text-gray-400">Add liquidity to this pool to reduce price impact and earn fees from swaps.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                // TODO: Navigate to liquidity page or open liquidity modal
+                alert('Liquidity provision feature coming soon! Add liquidity to reduce price impact.');
+              }}
+              className="mt-2 w-full text-xs px-3 py-2 rounded-lg bg-[#5a8a3a]/20 hover:bg-[#5a8a3a]/30 text-[#5cb849] font-medium transition-colors border border-[#5a8a3a]/30"
+            >
+              Add Liquidity →
+            </button>
+          </div>
+        )}
         </div>
 
         {/* Price Chart */}
