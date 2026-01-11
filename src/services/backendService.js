@@ -1,9 +1,14 @@
 // backendService.js
+import { logger } from '../utils/logger';
 
-const BACKEND_URL = 'https://dapp-backend-blue-bush-5535.fly.dev';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
+if (!BACKEND_URL) {
+  throw new Error('VITE_BACKEND_URL environment variable is required');
+}
 
 /**
- ** Fetch protocol statistics from backend
+ * Fetch protocol statistics from backend
  */
 export async function fetchBackendStats() {
   try {
@@ -32,7 +37,7 @@ export async function fetchBackendStats() {
       lastUpdated: data.lastUpdated,
     };
   } catch (error) {
-    console.error('Error fetching backend stats:', error);
+    logger.error('Error fetching backend stats:', error);
     throw error;
   }
 }
@@ -60,7 +65,7 @@ export async function fetchStatsBreakdown() {
       breakdown: data.breakdown || []
     };
   } catch (error) {
-    console.error('Error fetching stats breakdown:', error);
+    logger.error('Error fetching stats breakdown:', error);
     throw error;
   }
 }
@@ -95,7 +100,7 @@ export async function fetchBackendTransactions(limit = 50, offset = 0, type = nu
       offset: data.offset,
     };
   } catch (error) {
-    console.error('Error fetching backend transactions:', error);
+    logger.error('Error fetching backend transactions:', error);
     throw error;
   }
 }
@@ -122,7 +127,7 @@ export async function fetchWalletTransactions(walletAddress, limit = 20) {
     const data = await response.json();
     return data.transactions || [];
   } catch (error) {
-    console.error('Error fetching wallet transactions:', error);
+    logger.error('Error fetching wallet transactions:', error);
     throw error;
   }
 }

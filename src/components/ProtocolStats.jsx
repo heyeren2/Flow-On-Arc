@@ -57,7 +57,7 @@ const ProtocolStats = () => {
     return () => clearInterval(interval);
   }, [fetchStats]);
 
-  // Generate chart dataa
+  // Generate chart data
   const getChartData = (historicalData, currentValue) => {
     if (historicalData && historicalData.length > 0) {
       return historicalData;
@@ -168,7 +168,7 @@ const ProtocolStats = () => {
     return (
       <div className="glass-card p-6 mt-4">
         <h4 className="text-sm font-medium text-gray-400 mb-4">Transaction Breakdown</h4>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {types.map(({ key, label, icon: Icon, color }) => (
             <div key={key} className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-[#1a1a1a]">

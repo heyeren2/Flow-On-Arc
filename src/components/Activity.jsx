@@ -50,7 +50,7 @@ const Activity = () => {
   useEffect(() => {
     fetchTransactions();
     
-    // Refresh every 30 second
+    // Refresh every 30 seconds
     const interval = setInterval(fetchTransactions, 30000);
     return () => clearInterval(interval);
   }, [fetchTransactions]);
@@ -100,31 +100,31 @@ const Activity = () => {
         </div>
 
         {/* Details */}
-        <div className="flex-1 px-4">
+        <div className="flex-1 px-2 sm:px-4 min-w-0">
           {tx.type === 'swap' ? (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-white">{formatAmount(tx.amountIn)}</span>
-              <span className="text-gray-500">{tx.tokenIn}</span>
-              <ArrowRightLeft className="w-3 h-3 text-gray-600" />
-              <span className="text-white">{formatAmount(tx.amountOut)}</span>
-              <span className="text-gray-500">{tx.tokenOut}</span>
+            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm flex-wrap">
+              <span className="text-white truncate">{formatAmount(tx.amountIn)}</span>
+              <span className="text-gray-500 truncate">{tx.tokenIn}</span>
+              <ArrowRightLeft className="w-3 h-3 text-gray-600 shrink-0" />
+              <span className="text-white truncate">{formatAmount(tx.amountOut)}</span>
+              <span className="text-gray-500 truncate">{tx.tokenOut}</span>
             </div>
           ) : tx.type === 'claim' ? (
-            <p className="text-sm text-gray-400">Claimed tokens from faucet</p>
+            <p className="text-xs sm:text-sm text-gray-400 truncate">Claimed tokens from faucet</p>
           ) : (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-white">{formatAmount(tx.amountIn)}</span>
-              <span className="text-gray-500">{tx.tokenIn}</span>
+            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm flex-wrap">
+              <span className="text-white truncate">{formatAmount(tx.amountIn)}</span>
+              <span className="text-gray-500 truncate">{tx.tokenIn}</span>
             </div>
           )}
           {tx.usdValue > 0 && (
-            <p className="text-xs text-gray-600">${tx.usdValue.toFixed(2)}</p>
+            <p className="text-xs text-gray-600 truncate">${tx.usdValue.toFixed(2)}</p>
           )}
         </div>
 
         {/* Wallet */}
-        <div className="hidden md:block min-w-[120px] text-right">
-          <p className="text-xs text-gray-500 font-mono">{tx.walletShort}</p>
+        <div className="hidden sm:block min-w-[100px] sm:min-w-[120px] text-right">
+          <p className="text-xs text-gray-500 font-mono truncate">{tx.walletShort}</p>
         </div>
 
         {/* Explorer Link */}
@@ -144,10 +144,10 @@ const Activity = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold gradient-text">Activity</h1>
-          <p className="text-sm text-gray-500 mt-1">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold gradient-text">Activity</h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
             {total > 0 ? `${total} total transactions` : 'All protocol transactions'}
           </p>
         </div>
@@ -171,13 +171,13 @@ const Activity = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
         <Filter className="w-4 h-4 text-gray-500 shrink-0" />
         {filters.map((f) => (
           <button
             key={f.value}
             onClick={() => setFilter(f.value)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap min-h-[36px] ${
               filter === f.value
                 ? 'bg-[#5a8a3a] text-white'
                 : 'bg-[#1a1a1a] text-gray-400 hover:text-white hover:bg-[#252525]'

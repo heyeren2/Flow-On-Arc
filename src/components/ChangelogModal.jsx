@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Bell, Rocket, Shield, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ChangelogModal = ({ isOpen, onClose }) => {
-  const [expandedVersion, setExpandedVersion] = useState('v1.4.1');
+  const [expandedVersion, setExpandedVersion] = useState('v1.4.5');
 
   // Handle escape key
   useEffect(() => {
@@ -17,6 +17,53 @@ const ChangelogModal = ({ isOpen, onClose }) => {
 
   const updates = [
     {
+      version: "v1.4.5",
+      date: "January 9, 2026",
+      changes: [
+        { type: 'feature', text: 'Quick Percentage Buttons: Added 20%, 50%, and MAX (100%) buttons to Swap and Lend/Borrow components for quick amount selection. Users can instantly set a portion of their balance without typing.' },
+        { type: 'improvement', text: 'Amount Input Cleaning: All transaction amounts are now automatically cleaned (commas removed) before being sent to smart contracts, preventing transaction failures due to formatting issues.' },
+        { type: 'fix', text: 'Fixed withdraw transactions failing due to amount formatting. Withdrawals now work correctly when clicking available amounts.' },
+        { type: 'fix', text: 'Fixed borrow transactions failing due to amount parsing issues. Borrowing now works correctly with proper amount validation.' },
+        { type: 'improvement', text: 'Enhanced Error Handling: Added user-friendly error messages for transaction failures, including liquidation warnings and insufficient collateral notifications.' },
+        { type: 'improvement', text: 'Input Validation: Improved input field validation to prevent commas and invalid characters from being entered, ensuring clean amount values.' },
+        { type: 'improvement', text: 'Consistent Amount Handling: All transaction functions (supply, withdraw, borrow, repay, swap) now use consistent amount cleaning and validation logic.' }
+      ]
+    },
+    {
+      version: "v1.4.4",
+      date: "January 9, 2026",
+      changes: [
+        { type: 'feature', text: 'Mobile-First Responsive Design: Complete mobile optimization with hamburger menu, responsive sidebar drawer, and adaptive layouts for phones, tablets, and desktops.' },
+        { type: 'improvement', text: 'Mobile Navigation: Added hamburger menu with slide-in drawer sidebar on mobile devices. Sidebar automatically closes when navigating to a new page.' },
+        { type: 'improvement', text: 'Text Overflow Prevention: Fixed all text overflow issues with proper truncation, responsive font sizes, and flexible layouts. Text now fits perfectly within cards on all screen sizes.' },
+        { type: 'improvement', text: 'Touch-Friendly Interface: All buttons optimized for better mobile usability with improved spacing and padding throughout the app.' },
+        { type: 'improvement', text: 'Responsive Grid Layouts: All components now use adaptive grids (1 column mobile → 2 columns tablet → 3+ columns desktop) for optimal viewing on any device.' },
+        { type: 'improvement', text: 'Mobile-Optimized Components: Dashboard, Activity, Swap, LendBorrow, and ProtocolStats components fully optimized with responsive typography, flexible layouts, and mobile-specific improvements.' },
+        { type: 'fix', text: 'Fixed fixed margins and spacing issues on mobile. Removed desktop-only margins that were breaking mobile layouts.' },
+        { type: 'fix', text: 'Fixed floating buttons overlapping content on mobile by hiding them on small screens. Buttons remain visible on desktop for easy access.' }
+      ]
+    },
+    {
+      version: "v1.4.3",
+      date: "January 9, 2026",
+      changes: [
+        { type: 'improvement', text: 'Smart Withdraw Logic: Withdraw section now shows only available (free) collateral amounts, not the full supplied amount. Prevents users from attempting withdrawals that would cause liquidation.' },
+        { type: 'improvement', text: 'Token-Based Withdraw Display: Withdraw amounts are displayed in tokens (e.g., 666.66 CAT) instead of USD for clarity, matching user expectations.' },
+        { type: 'improvement', text: 'Proportional Collateral Distribution: Free collateral is calculated and distributed proportionally across all supplied tokens based on their share of total collateral.' },
+        { type: 'improvement', text: 'Enhanced Borrow Display: Borrow section now shows both USD and token equivalent amounts for better user understanding.' },
+        { type: 'fix', text: 'Fixed withdraw validation to prevent withdrawals exceeding free collateral, ensuring users maintain the required 80% LTV ratio.' }
+      ]
+    },
+    {
+      version: "v1.4.2",
+      date: "January 8, 2026",
+      changes: [
+        { type: 'feature', text: 'Minimum Transaction Limits: Added $5 USD minimum for all token swaps and supply operations to avoid transaction spam of small amounts (e.g., 0.1 CAT to USDC).' },
+        { type: 'improvement', text: 'Dashboard UI: Added "Dashboard" title heading to match the consistent design across all pages.' },
+        { type: 'improvement', text: 'Input Validation: Enhanced swap and supply forms with real-time USD value validation and clear error messages.' }
+      ]
+    },
+    {
       version: "v1.4.1",
       date: "January 5, 2026",
       changes: [
@@ -28,7 +75,6 @@ const ChangelogModal = ({ isOpen, onClose }) => {
       version: "v1.4.0",
       date: "January 5, 2026",
       changes: [
-        { type: 'feature', text: 'Backend API Integration: Deployed dedicated backend on Fly.io with PostgreSQL for persistent data tracking.' },
         { type: 'feature', text: 'Real-time Event Indexer: Backend automatically indexes all swap, supply, borrow, repay, withdraw, and faucet transactions.' },
         { type: 'feature', text: 'Activity Tab: Live transaction feed showing all protocol activity with type filters and block explorer links.' },
         { type: 'feature', text: 'Transaction History API: New endpoints for fetching protocol-wide and wallet-specific transaction history.' },

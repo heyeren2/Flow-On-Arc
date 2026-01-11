@@ -12,6 +12,7 @@ const TokenSelector = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [imageErrors, setImageErrors] = useState(new Set());
   const modalRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -291,15 +292,20 @@ const TokenSelector = ({
                         {/* Left side: Icon + Name */}
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full overflow-hidden bg-[#3a3a3a] flex items-center justify-center flex-shrink-0">
-                            <img 
-                              src={token.icon} 
-                              alt={token.symbol} 
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.parentElement.innerHTML = `<span class="text-white font-bold text-lg">${token.symbol[0]}</span>`;
-                              }}
-                            />
+                            {imageErrors.has(token.symbol) ? (
+                              <span className="text-white font-bold text-lg">
+                                {token.symbol[0] || '?'}
+                              </span>
+                            ) : (
+                              <img 
+                                src={token.icon} 
+                                alt={token.symbol} 
+                                className="w-full h-full object-cover"
+                                onError={() => {
+                                  setImageErrors(prev => new Set([...prev, token.symbol]));
+                                }}
+                              />
+                            )}
                           </div>
                           <div className="text-left">
                             <div className="font-bold text-white text-base group-hover:text-[#5a8a3a] transition-colors duration-200">
