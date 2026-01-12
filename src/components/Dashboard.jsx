@@ -159,19 +159,37 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
 
   // Donut chart component with total value in center
   const DonutChart = ({ data, size = 180, totalValue }) => {
-    if (data.length === 0) {
+    const radius = (size / 2) - 20;
+    const center = size / 2;
+    const circumference = 2 * Math.PI * radius;
+
+    // If no holdings, show placeholder donut (gray ring)
+    const showPlaceholder = data.length === 0;
+
+    if (showPlaceholder) {
       return (
-        <div className="flex items-center justify-center" style={{ width: size, height: size }}>
-          <div className="text-center">
-            <p className="text-gray-500 text-sm">No holdings</p>
+        <div className="relative" style={{ width: size, height: size }}>
+          <svg width={size} height={size} className="transform -rotate-90">
+            <circle
+              cx={center}
+              cy={center}
+              r={radius}
+              fill="none"
+              stroke="#2a2a2a"
+              strokeWidth="24"
+              className="transition-all duration-500"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-xs text-gray-500 mb-1">Total</p>
+              <p className="text-xl font-bold text-white">$0.00</p>
+            </div>
           </div>
         </div>
       );
     }
 
-    const radius = (size / 2) - 20;
-    const center = size / 2;
-    const circumference = 2 * Math.PI * radius;
     let cumulativeOffset = 0;
 
     return (
@@ -208,18 +226,17 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
     );
   };
 
+
   // Performance chart component
   const PerformanceChart = ({ data, height = 200 }) => {
-    if (data.length === 0) {
-      return (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-gray-500">No data available</p>
-        </div>
-      );
-    }
+    // Use placeholder data (flat line at $0) when no real data exists
+    const chartData = data.length > 0 ? data : Array.from({ length: 24 }, (_, i) => ({
+      time: Date.now() - ((23 - i) * 3600000),
+      value: 0,
+    }));
 
-    const minValue = Math.min(...data.map(d => d.value));
-    const maxValue = Math.max(...data.map(d => d.value));
+    const minValue = Math.min(...chartData.map(d => d.value));
+    const maxValue = Math.max(...chartData.map(d => d.value));
     const range = maxValue - minValue || 1;
 
     const width = 600;
@@ -227,8 +244,8 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
 
-    const points = data.map((d, i) => {
-      const x = padding.left + (i / (data.length - 1)) * chartWidth;
+    const points = chartData.map((d, i) => {
+      const x = padding.left + (i / (chartData.length - 1)) * chartWidth;
       const y = padding.top + chartHeight - ((d.value - minValue) / range) * chartHeight;
       return `${x},${y}`;
     }).join(' ');
@@ -324,7 +341,7 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold gradient-text">Dashboard</h1>
-      
+
       {/* Top Card: Total Portfolio Balance */}
       <div className="glass-card p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -416,7 +433,20 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
                 </div>
               ))}
               {portfolioHoldings.length === 0 && (
-                <p className="text-gray-500 text-sm text-center py-4">No holdings yet</p>
+                <>
+                  {[{ symbol: 'USDC', color: '#10B981' }, { symbol: 'DARC', color: '#F59E0B' }, { symbol: 'CAT', color: '#EF4444' }, { symbol: 'PANDA', color: '#8B5CF6' }].map((token) => (
+                    <div key={token.symbol} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full opacity-50"
+                          style={{ backgroundColor: token.color }}
+                        />
+                        <span className="text-gray-500 text-sm">{token.symbol}</span>
+                      </div>
+                      <span className="text-gray-500 text-sm font-medium">0.00%</span>
+                    </div>
+                  ))}
+                </>
               )}
             </div>
           </div>
