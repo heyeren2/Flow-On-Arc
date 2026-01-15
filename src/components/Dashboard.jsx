@@ -370,14 +370,14 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
           <div className="flex gap-3 flex-wrap">
             <button
               onClick={handleDeposit}
-              className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-2xl gradient-bg text-white font-medium hover:opacity-90 transition-opacity min-h-[44px] text-sm sm:text-base"
+              className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl gradient-bg text-white font-medium hover:opacity-90 transition-opacity min-h-[44px] text-sm sm:text-base"
             >
               <Wallet className="w-4 h-4 shrink-0" />
               <span className="whitespace-nowrap">Deposit</span>
             </button>
             <button
               onClick={handleWithdraw}
-              className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-2xl border border-[#2a2a2a] bg-[#111] text-white font-medium hover:bg-[#1a1a1a] transition-colors min-h-[44px] text-sm sm:text-base"
+              className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl border border-[#2a2a2a] bg-[#111] text-white font-medium hover:bg-[#1a1a1a] transition-colors min-h-[44px] text-sm sm:text-base"
             >
               <ArrowUpRight className="w-4 h-4 shrink-0" />
               <span className="whitespace-nowrap">Withdraw</span>
@@ -392,12 +392,12 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
         <div className="lg:col-span-3 glass-card p-6">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h2 className="text-base sm:text-lg font-semibold text-white">Portfolio Performance</h2>
-            <div className="flex gap-1 bg-[#1a1a1a] rounded-xl p-1 flex-wrap">
+            <div className="flex gap-1 bg-[#1a1a1a] rounded-lg p-1 flex-wrap">
               {['24H', '7D', '1M', '3M', '1Y'].map(period => (
                 <button
                   key={period}
                   onClick={() => setSelectedPeriod(period)}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors min-h-[32px] ${selectedPeriod === period
+                  className={`px-2 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-colors min-h-[32px] ${selectedPeriod === period
                     ? 'bg-[#5a8a3a] text-white'
                     : 'text-gray-400 hover:text-white'
                     }`}
