@@ -60,7 +60,13 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
               <NavLink
                 key={item.id}
                 to={item.path}
-                onClick={() => setIsMobileOpen(false)}
+                onClick={(e) => {
+                  setIsMobileOpen(false);
+                  if (item.id === 'home') {
+                    e.preventDefault();
+                    window.dispatchEvent(new CustomEvent('start-page-transition', { detail: { path: item.path } }));
+                  }
+                }}
                 className={({ isActive }) =>
                   `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all min-h-[44px] ${isActive
                     ? 'gradient-bg text-white shadow-lg shadow-[#5a8a3a]/20 font-semibold'

@@ -61,7 +61,7 @@ const LandingPage = () => {
 
         const handleAction = (e) => {
           if (e) e.preventDefault();
-          navigate('/dashboard');
+          window.dispatchEvent(new CustomEvent('start-page-transition', { detail: { path: '/dashboard' } }));
         };
 
         const features = [
