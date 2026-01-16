@@ -174,78 +174,36 @@ function AppLayout() {
           </button>
         </div>
 
-        {/* Fixed Floating Feedback Button - Top Right (Desktop only) */}
-        <button
-          onClick={() => setIsFeedbackOpen(true)}
-          className="hidden lg:flex fixed top-5 right-5 z-[1000] bg-[#5cb849] text-white px-5 py-3 rounded-full items-center gap-2 font-medium transition-all duration-200 min-h-[44px]"
-          style={{
-            boxShadow: '0 4px 12px rgba(92, 184, 73, 0.3), 0 0 20px rgba(92, 184, 73, 0.15)',
-            transform: 'scaleX(0.8)',
-            transformOrigin: 'right center'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scaleX(0.8) translateY(-3px)';
-            e.currentTarget.style.backgroundColor = '#6bc956';
-            e.currentTarget.style.boxShadow = '0 6px 16px rgba(107, 201, 86, 0.4), 0 0 24px rgba(107, 201, 86, 0.2)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scaleX(0.8) translateY(0)';
-            e.currentTarget.style.backgroundColor = '#5cb849';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(92, 184, 73, 0.3), 0 0 20px rgba(92, 184, 73, 0.15)';
-          }}
-        >
-          <MessageSquare className="w-4 h-4" />
-          <span>Feedback</span>
-        </button>
 
-        {/* Fixed Floating Buttons Container (Bottom Right - Hidden on mobile) */}
-        <div className="hidden lg:flex fixed bottom-5 right-5 z-[1000] items-center gap-1">
+        {/* Desktop Floating Action Buttons (Vertical Stack) */}
+        <div className="hidden lg:flex fixed bottom-6 right-6 z-[1000] flex-col items-center gap-3">
+          {/* Feedback Button */}
+          <button
+            onClick={() => setIsFeedbackOpen(true)}
+            className="w-10 h-10 rounded-full bg-[#5cb849] text-white flex items-center justify-center shadow-lg shadow-[#5cb849]/20 hover:bg-[#6bc956] hover:scale-110 transition-all duration-200 group relative"
+            title="Feedback"
+          >
+            <MessageSquare className="w-5 h-5" />
+          </button>
+
           {/* What's New Button */}
           <button
             onClick={() => setIsChangelogOpen(true)}
-            className="bg-[#1a1a1a] border border-[#2a2a2a] text-white px-5 py-3 rounded-full flex items-center gap-2 font-medium transition-all duration-200"
-            style={{
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-              transform: 'scaleX(0.8)',
-              transformOrigin: 'right center'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scaleX(0.8) translateY(-3px)';
-              e.currentTarget.style.backgroundColor = '#222222';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scaleX(0.8) translateY(0)';
-              e.currentTarget.style.backgroundColor = '#1a1a1a';
-            }}
+            className="w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-white flex items-center justify-center shadow-lg hover:bg-[#222222] hover:scale-110 transition-all duration-200 group relative"
+            title="What's New"
           >
-            <Bell className="w-4 h-4 text-[#5cb849]" />
-            <span>What's New</span>
+            <Bell className="w-5 h-5 text-[#5cb849]" />
           </button>
 
-          {/* Fixed Floating CTA Button */}
+          {/* Follow on X Button */}
           <a
             href="https://twitter.com/heyeren_"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-[#5cb849] text-white px-5 py-3 rounded-full flex items-center gap-2 font-medium transition-all duration-200"
-            style={{
-              boxShadow: '0 4px 12px rgba(92, 184, 73, 0.3), 0 0 20px rgba(92, 184, 73, 0.15)',
-              transform: 'scaleX(0.8)',
-              transformOrigin: 'right center'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scaleX(0.8) translateY(-3px)';
-              e.currentTarget.style.backgroundColor = '#6bc956';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(107, 201, 86, 0.4), 0 0 24px rgba(107, 201, 86, 0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scaleX(0.8) translateY(0)';
-              e.currentTarget.style.backgroundColor = '#5cb849';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(92, 184, 73, 0.3), 0 0 20px rgba(92, 184, 73, 0.15)';
-            }}
+            className="w-10 h-10 rounded-full bg-[#5cb849] text-white flex items-center justify-center shadow-lg shadow-[#5cb849]/20 hover:bg-[#6bc956] hover:scale-110 transition-all duration-200 group relative"
+            title="Follow on X"
           >
-            <Twitter className="w-4 h-4" />
-            <span>Follow on X</span>
+            <Twitter className="w-5 h-5" />
           </a>
         </div>
 
