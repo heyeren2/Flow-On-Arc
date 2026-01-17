@@ -34,9 +34,15 @@ const DiscordIcon = ({ className }) => (
 
 const queryClient = new QueryClient();
 
+// Get WalletConnect Project ID from environment variable
+const WALLET_CONNECT_PROJECT_ID = import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID;
+if (!WALLET_CONNECT_PROJECT_ID) {
+  throw new Error('VITE_WALLET_CONNECT_PROJECT_ID environment variable is required');
+}
+
 const config = getDefaultConfig({
   appName: 'Flow On Arc',
-  projectId: import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID || 'd74f676fe32bb531fb9268bbd4e43a8f',
+  projectId: WALLET_CONNECT_PROJECT_ID,
   chains: [ARC_TESTNET],
   ssr: false,
 });
