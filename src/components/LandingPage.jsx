@@ -71,6 +71,37 @@ const LandingPage = () => {
       .animate-wave-flow-fast {
         animation: wave-flow 10s ease-in-out infinite;
       }
+      .starfield {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background: transparent;
+      }
+      .star-layer-1 {
+        width: 1px;
+        height: 1px;
+        background: transparent;
+        box-shadow: 1744px 110px #FFF, 1269px 1058px #FFF, 1022px 1419px #FFF, 1515px 446px #FFF, 1145px 125px #FFF, 1876px 1493px #FFF, 1729px 1383px #FFF, 1332px 1863px #FFF, 1695px 1561px #FFF, 1801px 406px #FFF, 154px 381px #FFF, 1693px 802px #FFF, 911px 470px #FFF, 1618px 436px #FFF, 10px 1083px #FFF, 421px 408px #FFF, 1551px 710px #FFF, 182px 1215px #FFF, 107px 1198px #FFF, 1420px 248px #FFF;
+        animation: star-drift 150s linear infinite;
+      }
+      .star-layer-2 {
+        width: 2px;
+        height: 2px;
+        background: transparent;
+        box-shadow: 1533px 1475px #FFF, 1637px 424px #FFF, 1289px 409px #FFF, 1104px 502px #FFF, 1928px 1017px #FFF, 1461px 376px #FFF, 24px 1740px #FFF, 483px 1022px #FFF, 1205px 1656px #FFF, 1105px 1546px #FFF;
+        animation: star-drift 100s linear infinite;
+      }
+      .star-layer-3 {
+        width: 3px;
+        height: 3px;
+        background: transparent;
+        box-shadow: 1374px 1640px #FFF, 1243px 1279px #FFF, 834px 281px #FFF, 1622px 1004px #FFF, 804px 1546px #FFF;
+        animation: star-drift 50s linear infinite;
+      }
+      @keyframes star-drift {
+        from { transform: translateY(0px); }
+        to { transform: translateY(-2000px); }
+      }
     `;
     document.head.appendChild(style);
     return () => document.head.removeChild(style);
@@ -462,18 +493,12 @@ const LandingPage = () => {
 
                 {/* Scrolling Icons Section */}
                 <div className="w-full mt-24 relative overflow-hidden">
-                  {/* Pendle Dots Background Video */}
-                  <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    preload="metadata"
-                    poster="/assets/dots-poster.png"
-                    className="absolute inset-0 w-full h-full object-cover z-0 opacity-30 pointer-events-none"
-                  >
-                    <source src="/videos/dots.mp4" type="video/mp4" />
-                  </video>
+                  {/* CSS Starfield Background - Massive Bandwidth Saving */}
+                  <div className="starfield opacity-40 pointer-events-none">
+                    <div className="star-layer-1"></div>
+                    <div className="star-layer-2"></div>
+                    <div className="star-layer-3"></div>
+                  </div>
 
                   <div className="relative z-10 w-full">
                     <div className="w-full border-t border-[#5a8a3a]/10 pt-12">
