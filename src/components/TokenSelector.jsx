@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, X, Search } from 'lucide-react';
 
 const TokenSelector = ({
@@ -156,14 +157,14 @@ const TokenSelector = ({
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          MODAL OVERLAY + DIALOG
+          MODAL OVERLAY + DIALOG (rendered via Portal to ensure it's on top)
           ═══════════════════════════════════════════════════════════════════ */}
-      {isOpen && (
+      {isOpen && createPortal(
         <div
-          className={`fixed inset-0 z-[9999] flex justify-center p-4 ${raised ? 'items-center pb-[30rem]' : 'items-center'}`}
+          className={`fixed inset-0 z-[9999] flex justify-center p-4 ${raised ? 'items-start pt-16' : 'items-start sm:items-center pt-12 sm:pt-4'}`}
           style={{
             // Overlay: rgba(0, 0, 0, 0.7) with backdrop blur
-            backgroundColor: isAnimating ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0)',
+            backgroundColor: isAnimating ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0)',
             backdropFilter: isAnimating ? 'blur(6px)' : 'blur(0px)',
             WebkitBackdropFilter: isAnimating ? 'blur(6px)' : 'blur(0px)',
             transition: 'all 250ms ease-out',
@@ -176,6 +177,7 @@ const TokenSelector = ({
               - Rounded corners (border-radius: 16px)
               - Padding: 24px
               - Box shadow for depth
+              - Max height on mobile to prevent overflow
               ═══════════════════════════════════════════════════════════════ */}
           <div
             ref={modalRef}
@@ -186,7 +188,7 @@ const TokenSelector = ({
                 : 'scale(0.96) translateY(12px)',
               transition: 'all 250ms cubic-bezier(0.16, 1, 0.3, 1)',
             }}
-            className="w-full max-w-[460px] bg-[#1a1a1a] rounded-2xl p-6 border border-[#2a2a2a] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.05)]"
+            className="w-full max-w-[400px] sm:max-w-[460px] max-h-[85vh] sm:max-h-[90vh] overflow-hidden bg-[#1a1a1a] rounded-2xl p-5 sm:p-6 border border-[#2a2a2a] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.05)]"
           >
             {/* ═══════════════════════════════════════════════════════════════
                 HEADER
@@ -332,8 +334,7 @@ const TokenSelector = ({
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </div>, document.body)}
     </>
   );
 };

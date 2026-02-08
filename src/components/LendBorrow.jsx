@@ -88,8 +88,8 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
       const data = await getUserAccountData(provider, address);
       setAccountData(data);
 
-      const collateral = {};
-      const debt = {};
+      const collateral = Object.create(null);
+      const debt = Object.create(null);
       for (const token of LENDABLE_TOKENS) {
         collateral[token.symbol] = await getUserCollateral(provider, address, token.address);
         debt[token.symbol] = await getUserDebt(provider, address, token.address);
@@ -200,9 +200,15 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
       });
 
       setAmount('');
+      // Immediate refresh for snappier UI
       fetchAccountData();
       fetchBalances();
-      // Modal will auto-close after 5 seconds showing confirmation
+
+      // Delay refresh to allow RPC/Indexer to catch up
+      setTimeout(() => {
+        fetchAccountData();
+        fetchBalances();
+      }, 2000);
 
       return tx;
     } catch (error) {
@@ -239,9 +245,15 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
       });
 
       setAmount('');
+      // Immediate refresh for snappier UI
       fetchAccountData();
       fetchBalances();
-      // Modal will auto-close after 5 seconds showing confirmation
+
+      // Delay refresh to allow RPC/Indexer to catch up
+      setTimeout(() => {
+        fetchAccountData();
+        fetchBalances();
+      }, 2000);
 
       return tx;
     } catch (error) {
@@ -284,9 +296,15 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
       });
 
       setAmount('');
+      // Immediate refresh for snappier UI
       fetchAccountData();
       fetchBalances();
-      // Modal will auto-close after 5 seconds showing confirmation
+
+      // Delay refresh to allow RPC/Indexer to catch up
+      setTimeout(() => {
+        fetchAccountData();
+        fetchBalances();
+      }, 2000);
 
       return tx;
     } catch (error) {
@@ -623,31 +641,33 @@ const LendBorrow = ({ initialTab = 'supply' }) => {
       </div>
 
       {/* Transaction Modal */}
-      <TransactionModal
-        isOpen={showModal}
-        onClose={() => {
-          setShowModal(false);
-          setIsBlurActive(false);
-        }}
-        transactionType={activeTab}
-        fromToken={selectedToken}
-        toToken={selectedToken}
-        fromAmount={amount}
-        toAmount={amount}
-        onApprove={
-          activeTab === 'supply' ? handleApproveSupply :
-            activeTab === 'repay' ? handleApproveRepay :
-              undefined
-        }
-        onExecute={
-          activeTab === 'supply' ? handleExecuteSupply :
-            activeTab === 'withdraw' ? handleExecuteWithdraw :
-              activeTab === 'borrow' ? handleExecuteBorrow :
-                handleExecuteRepay
-        }
-        requiresApproval={requiresApproval && (activeTab === 'supply' || activeTab === 'repay')}
-        transactionParams={{}}
-      />
+      {showModal && (
+        <TransactionModal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false);
+            setIsBlurActive(false);
+          }}
+          transactionType={activeTab}
+          fromToken={selectedToken}
+          toToken={selectedToken}
+          fromAmount={amount}
+          toAmount={amount}
+          onApprove={
+            activeTab === 'supply' ? handleApproveSupply :
+              activeTab === 'repay' ? handleApproveRepay :
+                undefined
+          }
+          onExecute={
+            activeTab === 'supply' ? handleExecuteSupply :
+              activeTab === 'withdraw' ? handleExecuteWithdraw :
+                activeTab === 'borrow' ? handleExecuteBorrow :
+                  handleExecuteRepay
+          }
+          requiresApproval={requiresApproval && (activeTab === 'supply' || activeTab === 'repay')}
+          transactionParams={{}}
+        />
+      )}
     </div>
   );
 };

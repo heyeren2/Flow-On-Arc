@@ -22,7 +22,10 @@ const PriceChart = ({ token }) => {
 
     for (let i = 0; i < dataPoints; i++) {
       const timeOffset = dataPoints - i - 1;
-      const randomVariation = (Math.random() - 0.5) * volatility;
+      const cryptoArray = new Uint32Array(1);
+      window.crypto.getRandomValues(cryptoArray);
+      const randomVal = cryptoArray[0] / (0xffffffff + 1);
+      const randomVariation = (randomVal - 0.5) * volatility;
       const priceValue = basePrice * (1 + randomVariation + (timeOffset * 0.001));
       data.push({
         time: timeOffset,
@@ -45,15 +48,20 @@ const PriceChart = ({ token }) => {
       try {
         const price = await getTokenPrice(provider, token.address);
         setCurrentPrice(price);
-        
+
+        const cryptoArray = new Uint32Array(2);
+        window.crypto.getRandomValues(cryptoArray);
+        const randomVal1 = cryptoArray[0] / (0xffffffff + 1);
+        const randomVal2 = cryptoArray[1] / (0xffffffff + 1);
+
         // Generate mock price change (between -5% and +5%)
-        const change = (Math.random() - 0.5) * 0.1;
+        const change = (randomVal1 - 0.5) * 0.1;
         setPriceChange(change);
-        
+
         // Generate mock 24h volume
-        const volume = Math.random() * 100000 + 10000; // Between 10k and 110k
+        const volume = randomVal2 * 100000 + 10000; // Between 10k and 110k
         setVolume24h(volume);
-        
+
         // Generate chart data
         const data = generateChartData(price, selectedTimeframe);
         setChartData(data);
@@ -95,13 +103,13 @@ const PriceChart = ({ token }) => {
   // Generate path for the line
   const pathData = useMemo(() => {
     if (chartData.length === 0) return '';
-    
+
     const points = chartData.map((point, index) => {
       const x = padding + (index / (chartData.length - 1)) * chartInnerWidth;
       const y = padding + chartInnerHeight - ((point.price - minPrice) / priceRange) * chartInnerHeight;
       return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
     });
-    
+
     return points.join(' ');
   }, [chartData, minPrice, priceRange, chartInnerHeight, chartInnerWidth, padding]);
 
@@ -163,11 +171,10 @@ const PriceChart = ({ token }) => {
           <button
             key={timeframe}
             onClick={() => setSelectedTimeframe(timeframe)}
-            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-              selectedTimeframe === timeframe
-                ? 'bg-[#5a8a3a] text-white'
-                : 'bg-[#1a1a1a] text-gray-400 hover:text-white'
-            }`}
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${selectedTimeframe === timeframe
+              ? 'bg-[#5a8a3a] text-white'
+              : 'bg-[#1a1a1a] text-gray-400 hover:text-white'
+              }`}
           >
             {timeframe}
           </button>
@@ -215,7 +222,7 @@ const PriceChart = ({ token }) => {
             fill="url(#gradient)"
             opacity="0.3"
           />
-          
+
           {/* Gradient definition */}
           <defs>
             <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">

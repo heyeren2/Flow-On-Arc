@@ -58,15 +58,15 @@ export async function fetchBackendStats() {
   if (subgraphData && subgraphData.protocols && subgraphData.protocols[0]) {
     const p = subgraphData.protocols[0];
     return {
-      totalTransactions: parseInt(p.totalTransactions),
+      totalTransactions: parseInt(p.totalTransactions, 10),
       totalVolume: parseFloat(p.totalVolumeUSD),
-      swaps: parseInt(p.swapCount),
-      supplies: parseInt(p.supplyCount),
-      withdraws: parseInt(p.withdrawCount),
-      borrows: parseInt(p.borrowCount),
-      repays: parseInt(p.repayCount),
-      claims: parseInt(p.claimCount),
-      lastUpdated: parseInt(p.lastUpdated) * 1000,
+      swaps: parseInt(p.swapCount, 10),
+      supplies: parseInt(p.supplyCount, 10),
+      withdraws: parseInt(p.withdrawCount, 10),
+      borrows: parseInt(p.borrowCount, 10),
+      repays: parseInt(p.repayCount, 10),
+      claims: parseInt(p.claimCount, 10),
+      lastUpdated: parseInt(p.lastUpdated, 10) * 1000,
     };
   }
 
@@ -142,7 +142,7 @@ export async function fetchBackendTransactions(limit = 50, offset = 0, type = nu
     if (subgraphData.protocols && subgraphData.protocols[0]) {
       const p = subgraphData.protocols[0];
       if (!type) {
-        total = parseInt(p.totalTransactions);
+        total = parseInt(p.totalTransactions, 10);
       } else {
         const countMap = {
           'swap': 'swapCount',
@@ -153,7 +153,7 @@ export async function fetchBackendTransactions(limit = 50, offset = 0, type = nu
           'claim': 'claimCount'
         };
         const field = countMap[type];
-        total = field ? parseInt(p[field]) : txs.length;
+        total = field ? parseInt(p[field], 10) : txs.length;
       }
     } else {
       total = txs.length;

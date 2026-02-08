@@ -569,26 +569,28 @@ const PoolCard = ({ token, pair, provider, signer, balances, fetchBalances, show
             )}
 
             {/* Transaction Modal */}
-            <TransactionModal
-                isOpen={showModal}
-                onClose={() => {
-                    setShowModal(false);
-                    if (setIsTxModalOpen) setIsTxModalOpen(false);
-                }}
-                transactionType={mode === 'add' ? 'add_liquidity' : 'remove_liquidity'}
-                fromToken={pair}
-                toToken={token}
-                fromAmount={amountPair}
-                toAmount={amountToken}
-                onApproveA={async () => approveToken(signer, pair, amountPair)}
-                onApproveB={async () => approveToken(signer, token, amountToken)}
-                onExecute={handleExecute}
-                requiresApproval={mode === 'add'}
-                transactionParams={{
-                    title: mode === 'add' ? 'Add Liquidity' : 'Remove Liquidity',
-                    pair: `${pair.symbol}/${token.symbol}`,
-                }}
-            />
+            {showModal && (
+                <TransactionModal
+                    isOpen={showModal}
+                    onClose={() => {
+                        setShowModal(false);
+                        if (setIsTxModalOpen) setIsTxModalOpen(false);
+                    }}
+                    transactionType={mode === 'add' ? 'add_liquidity' : 'remove_liquidity'}
+                    fromToken={pair}
+                    toToken={token}
+                    fromAmount={amountPair}
+                    toAmount={amountToken}
+                    onApproveA={async () => approveToken(signer, pair, amountPair)}
+                    onApproveB={async () => approveToken(signer, token, amountToken)}
+                    onExecute={handleExecute}
+                    requiresApproval={mode === 'add'}
+                    transactionParams={{
+                        title: mode === 'add' ? 'Add Liquidity' : 'Remove Liquidity',
+                        pair: `${pair.symbol}/${token.symbol}`,
+                    }}
+                />
+            )}
         </div >
     );
 };

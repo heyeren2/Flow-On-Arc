@@ -131,6 +131,11 @@ const Swap = () => {
     setFromAmount('');
     setToAmount('');
     fetchBalances();
+
+    // Delay refresh to allow RPC to catch up
+    setTimeout(() => {
+      fetchBalances();
+    }, 2000);
     // Modal will auto-close after 5 seconds showing confirmation
 
     return tx;
@@ -413,25 +418,27 @@ const Swap = () => {
       <ProtocolStats />
 
       {/* Transaction Modal */}
-      <TransactionModal
-        isOpen={showModal}
-        onClose={() => {
-          setShowModal(false);
-          setIsBlurActive(false);
-        }}
-        transactionType="swap"
-        fromToken={fromToken}
-        toToken={toToken}
-        fromAmount={fromAmount}
-        toAmount={toAmount}
-        onApprove={handleApprove}
-        onExecute={handleExecuteSwap}
-        requiresApproval={requiresApproval}
-        transactionParams={{
-          slippage: slippageTolerance,
-          exchangeRate: `1 ${fromToken?.symbol} = ${toAmount && fromAmount ? (parseFloat(toAmount) / parseFloat(fromAmount)).toFixed(6) : '0'} ${toToken?.symbol}`,
-        }}
-      />
+      {showModal && (
+        <TransactionModal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false);
+            setIsBlurActive(false);
+          }}
+          transactionType="swap"
+          fromToken={fromToken}
+          toToken={toToken}
+          fromAmount={fromAmount}
+          toAmount={toAmount}
+          onApprove={handleApprove}
+          onExecute={handleExecuteSwap}
+          requiresApproval={requiresApproval}
+          transactionParams={{
+            slippage: slippageTolerance,
+            exchangeRate: `1 ${fromToken?.symbol} = ${toAmount && fromAmount ? (parseFloat(toAmount) / parseFloat(fromAmount)).toFixed(6) : '0'} ${toToken?.symbol}`,
+          }}
+        />
+      )}
     </div>
   );
 };

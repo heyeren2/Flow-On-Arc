@@ -14,8 +14,8 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
   const { balances, rawBalances, fetchBalances } = useBalances(provider, address);
 
   const [showBalance, setShowBalance] = useState(true);
-  const [suppliedTokens, setSuppliedTokens] = useState({});
-  const [borrowedTokens, setBorrowedTokens] = useState({});
+  const [suppliedTokens, setSuppliedTokens] = useState(Object.create(null));
+  const [borrowedTokens, setBorrowedTokens] = useState(Object.create(null));
   const [accountData, setAccountData] = useState({
     totalCollateralUSD: 0n,
     totalDebtUSD: 0n,
@@ -39,10 +39,10 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
       const fetchData = async () => {
         // Don't fetch if page is hidden (mobile background)
         if (document.hidden) return;
-        
+
         try {
-          const supplied = {};
-          const borrowed = {};
+          const supplied = Object.create(null);
+          const borrowed = Object.create(null);
           for (const token of LENDABLE_TOKENS) {
             try {
               const collateral = await getUserCollateral(provider, address, token.address);
@@ -71,14 +71,14 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
           // Don't crash - just log the error
         }
       };
-      
+
       fetchData();
-      
+
       // Increase interval on mobile to reduce load (30 seconds instead of 10)
       const isMobile = window.innerWidth < 768;
       const intervalTime = isMobile ? 30000 : 10000;
       const interval = setInterval(fetchData, intervalTime);
-      
+
       // Also listen for visibility changes to fetch when page becomes visible
       const handleVisibilityChange = () => {
         if (!document.hidden) {
@@ -86,7 +86,7 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
         }
       };
       document.addEventListener('visibilitychange', handleVisibilityChange);
-      
+
       return () => {
         clearInterval(interval);
         document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -133,7 +133,7 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
     const generateData = () => {
       // Skip if page is hidden (mobile background)
       if (document.hidden) return;
-      
+
       try {
         const data = [];
         const now = Date.now();
@@ -142,7 +142,10 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
 
         for (let i = points - 1; i >= 0; i--) {
           const timeOffset = (points - 1 - i) / points;
-          const variation = 0.95 + (timeOffset * 0.1) + (Math.random() * 0.05);
+          const cryptoArray = new Uint32Array(1);
+          window.crypto.getRandomValues(cryptoArray);
+          const randomVal = cryptoArray[0] / (0xffffffff + 1);
+          const variation = 0.95 + (timeOffset * 0.1) + (randomVal * 0.05);
           data.push({
             time: now - (i * 3600000),
             value: baseValue * variation,
@@ -158,7 +161,7 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
     if (totalWalletBalance > 0) {
       generateData();
     }
-    
+
     // Increase interval on mobile (2 minutes instead of 1 minute) to reduce load
     const isMobile = window.innerWidth < 768;
     const intervalTime = isMobile ? 120000 : 60000;
@@ -167,7 +170,7 @@ const Dashboard = ({ setLendBorrowInitialTab, setActiveTab }) => {
         generateData();
       }
     }, intervalTime);
-    
+
     return () => clearInterval(interval);
   }, [totalWalletBalance]);
 

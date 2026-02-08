@@ -76,7 +76,7 @@ export async function getPoolReserves(provider, tokenA, tokenB) {
             reserve1: pool.reserve1,
         };
     } catch (error) {
-        console.error('Error getting pool reserves:', error);
+        console.warn('[RPC] Pool reserves fetch failed:', error.code || error.message);
         return null;
     }
 }
@@ -90,7 +90,7 @@ export async function getPoolTotalSupply(provider, tokenA, tokenB) {
         const totalSupply = await poolContract.totalLiquidity(poolId);
         return totalSupply;
     } catch (error) {
-        console.error('Error getting total supply:', error);
+        console.warn('[RPC] Pool total supply fetch failed:', error.code || error.message);
         return 0n;
     }
 }

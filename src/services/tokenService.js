@@ -3,6 +3,9 @@ import { ERC20_ABI, SWAP_ROUTER_ABI } from '../constants/abis';
 import { TOKENS } from '../constants/tokens';
 import { CONTRACTS } from '../constants/contracts';
 
+// Known precompile addresses that don't support standard ERC20 calls
+const USDC_PRECOMPILE = '0x3600000000000000000000000000000000000000';
+
 export async function getTokenBalance(provider, tokenAddress, userAddress) {
   if (!provider || !userAddress || !tokenAddress) {
     return 0n;
@@ -13,12 +16,21 @@ export async function getTokenBalance(provider, tokenAddress, userAddress) {
     const checksummedTokenAddress = ethers.getAddress(tokenAddress);
     const checksummedUserAddress = ethers.getAddress(userAddress);
 
+    // USDC is the native token on Arc - use getBalance
+    // provider.getBalance() returns wei (18 decimals) but USDC is 6 decimals
+    // We need to scale down by 10^12 to convert to 6-decimal format
+    if (checksummedTokenAddress.toLowerCase() === USDC_PRECOMPILE.toLowerCase()) {
+      const balanceWei = await provider.getBalance(checksummedUserAddress);
+      // Convert from 18 decimals to 6 decimals (divide by 10^12)
+      const balance = balanceWei / 1_000_000_000_000n;
+      return balance;
+    }
+
     const tokenContract = new ethers.Contract(checksummedTokenAddress, ERC20_ABI, provider);
     const balance = await tokenContract.balanceOf(checksummedUserAddress);
     return balance;
   } catch (error) {
-    console.error(`Error fetching balance for ${tokenAddress}:`, error);
-    // Return 0n on error to prevent breaking the UI
+    console.warn(`[RPC] Balance fetch failed for ${tokenAddress}:`, error.code || error.message);
     return 0n;
   }
 }
@@ -31,7 +43,7 @@ export async function getPoolLiquidity(provider, poolId, userAddress) {
     const balance = await ammContract.userLiquidity(poolId, userAddress);
     return balance;
   } catch (error) {
-    console.error(`Error fetching liquidity for pool ${poolId}:`, error);
+    console.warn(`[RPC] Pool liquidity fetch failed for ${poolId}:`, error.code || error.message);
     return 0n;
   }
 }
@@ -99,7 +111,7 @@ export async function getAllBalances(provider, userAddress) {
       LP_USDC_PANDA: balances[6] || 0n,
     };
   } catch (error) {
-    console.error('Error fetching all balances:', error);
+    console.error('Error fetching all balances:', error.message);
     return {
       CAT: 0n,
       DARC: 0n,

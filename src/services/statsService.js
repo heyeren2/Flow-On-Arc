@@ -7,13 +7,13 @@ import { fetchBackendStats } from './backendService';
 // ========== CACHING CONFIGURATION ==========
 
 // Cache for storing last known good values
-const statsCache = {
+const statsCache = Object.assign(Object.create(null), {
   tvl: null,
   volume: null,
   transactions: null,
   lastUpdated: null,
   source: null, // 'backend' or 'onchain'
-};
+});
 
 // AMM Trading pairs (token paired with USDC)
 const AMM_PAIRS = [
@@ -52,7 +52,7 @@ export async function getTotalTVL(provider) {
   try {
     const lendingPool = new ethers.Contract(CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, provider);
     const swapRouter = new ethers.Contract(CONTRACTS.SWAP_ROUTER, SWAP_ROUTER_ABI, provider);
-    
+
     let lendingTVL = 0n;
     let ammTVL = 0n;
 
@@ -62,12 +62,12 @@ export async function getTotalTVL(provider) {
         const reserveData = await withRetry(() => lendingPool.getReserveData(token.address));
         const totalSupplied = reserveData[1] || 0n;
         const priceUSD = reserveData[4] || 0n;
-        
+
         const tokenDecimals = token.decimals;
         const scalingFactor = 10n ** BigInt(18 - tokenDecimals);
         const normalizedSupplied = totalSupplied * scalingFactor;
         const valueUSD = (normalizedSupplied * priceUSD) / 10n ** 18n;
-        
+
         lendingTVL += valueUSD;
       } catch (error) {
         console.error(`Error fetching reserve data for ${token.symbol}:`, error.message);
@@ -79,15 +79,15 @@ export async function getTotalTVL(provider) {
       try {
         const poolId = await withRetry(() => swapRouter.getPoolId(token.address, pair.address));
         const poolData = await withRetry(() => swapRouter.pools(poolId));
-        
+
         const reserve0 = poolData[2] || 0n;
         const reserve1 = poolData[3] || 0n;
-        
+
         if (reserve0 === 0n && reserve1 === 0n) continue;
-        
+
         const token0Address = poolData[0];
         let tokenReserve, usdcReserve;
-        
+
         if (token0Address && token0Address.toLowerCase() === token.address.toLowerCase()) {
           tokenReserve = reserve0;
           usdcReserve = reserve1;
@@ -95,19 +95,19 @@ export async function getTotalTVL(provider) {
           tokenReserve = reserve1;
           usdcReserve = reserve0;
         }
-        
+
         const reserveData = await withRetry(() => lendingPool.getReserveData(token.address));
         const tokenPriceUSD = reserveData[4] || 0n;
-        
+
         const tokenScalingFactor = 10n ** BigInt(18 - token.decimals);
         const normalizedTokenReserve = tokenReserve * tokenScalingFactor;
         const tokenValueUSD = (normalizedTokenReserve * tokenPriceUSD) / 10n ** 18n;
-        
+
         const usdcScalingFactor = 10n ** BigInt(18 - pair.decimals);
         const normalizedUsdcReserve = usdcReserve * usdcScalingFactor;
         const usdcPriceUSD = 10n ** 18n;
         const usdcValueUSD = (normalizedUsdcReserve * usdcPriceUSD) / 10n ** 18n;
-        
+
         ammTVL += tokenValueUSD + usdcValueUSD;
       } catch (error) {
         console.error(`Error fetching AMM pool data for ${token.symbol}/${pair.symbol}:`, error.message);
@@ -174,7 +174,15 @@ export async function getProtocolStats(provider) {
     const data = [];
     for (let i = 0; i < points; i++) {
       const progress = i / (points - 1);
-      const variance = 0.9 + Math.random() * 0.2; // 90% to 110%
+      const cryptoArray = new Uint32Array(1);
+      if (typeof window !== 'undefined' && window.crypto) {
+        window.crypto.getRandomValues(cryptoArray);
+      } else {
+        // Fallback for node environment if needed
+        require('crypto').getRandomValues(cryptoArray);
+      }
+      const randomVal = cryptoArray[0] / (0xffffffff + 1);
+      const variance = 0.9 + randomVal * 0.2; // 90% to 110%
       const value = currentValue * (0.6 + progress * 0.4) * variance;
       data.push(Math.max(0, value));
     }

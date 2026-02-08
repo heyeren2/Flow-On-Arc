@@ -101,7 +101,9 @@ export const NotificationProvider = ({ children }) => {
   const [isBlurActive, setIsBlurActive] = useState(false);
 
   const addNotification = useCallback((notification) => {
-    const id = Date.now() + Math.random();
+    const cryptoArray = new Uint32Array(1);
+    window.crypto.getRandomValues(cryptoArray);
+    const id = Date.now().toString() + '-' + cryptoArray[0].toString();
     const newNotification = { ...notification, id };
 
     setNotifications((prev) => [...prev, newNotification]);

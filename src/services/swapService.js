@@ -28,7 +28,7 @@ export async function getSwapAmountsOut(provider, amountIn, tokenIn, tokenOut) {
     const amounts = await swapRouter.getAmountsOut(amountInWei, path);
     return amounts[amounts.length - 1];
   } catch (error) {
-    console.error('Error getting swap amounts:', error);
+    console.warn('[RPC] Swap amounts fetch failed:', error.code || error.message);
     return 0n;
   }
 }
@@ -71,7 +71,7 @@ export async function getSpotExchangeRate(provider, tokenIn, tokenOut) {
 
     return rate;
   } catch (error) {
-    console.error('Error getting spot exchange rate:', error);
+    console.warn('[RPC] Spot exchange rate fetch failed:', error.code || error.message);
     return null;
   }
 }
@@ -85,7 +85,7 @@ export async function checkSwapAllowance(provider, userAddress, tokenIn, amountI
     const allowance = await tokenInContract.allowance(userAddress, CONTRACTS.SWAP_ROUTER);
     return allowance >= amountInWei;
   } catch (error) {
-    console.error('Error checking allowance:', error);
+    console.warn('[RPC] Allowance check failed:', error.code || error.message);
     return false;
   }
 }

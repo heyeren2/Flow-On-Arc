@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, CheckCircle2, Clock, ChevronRight, Gift, Rocket, ExternalLink } from 'lucide-react';
 import { ARC_TESTNET } from '../constants/contracts';
@@ -29,33 +29,51 @@ const TransactionModal = ({
   const [savedFromAmount, setSavedFromAmount] = useState('');
   const [savedToAmount, setSavedToAmount] = useState('');
 
+  // Refs for managing timeouts and lifecycle
+  const autoCloseTimeoutRef = useRef(null);
+  const stepAdvanceTimeoutRef = useRef(null);
+  const isMounted = useRef(false);
+
   useEffect(() => {
+    isMounted.current = true;
+
     if (isOpen) {
-      // 1. Sync local states immediately
+      // 1. Clear any existing timeouts from previous modal sessions
+      if (autoCloseTimeoutRef.current) clearTimeout(autoCloseTimeoutRef.current);
+      if (stepAdvanceTimeoutRef.current) clearTimeout(stepAdvanceTimeoutRef.current);
+
+      // 2. Sync local states immediately
       setSavedFromAmount(fromAmount);
       setSavedToAmount(toAmount);
-      setIsConfirmed(false);
+      setStepStatus({});
       setTransactionHash(null);
       setCurrentStep(0);
+      setIsConfirmed(false);
 
-      // 2. Set the first step to processing immediately so the user sees the spinner 
-      // BEFORE the wallet popup disrupts the UI focus. 
       const labels = getStepLabels();
       if (labels.length > 0) {
         setStepStatus({ [labels[0].key]: 'processing' });
-      } else {
-        setStepStatus({});
       }
 
-      // 3. 1500ms delay to allow modal animation to complete and user to clearly see the "Processing" state
-      // before the wallet popup takes over.
+      // 3. 1000ms delay to ensure modal is fully visible before wallet popup
       const timer = setTimeout(() => {
-        handleCombined();
-      }, 1500);
+        if (isMounted.current) {
+          handleCombined();
+        }
+      }, 1000);
 
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        if (autoCloseTimeoutRef.current) clearTimeout(autoCloseTimeoutRef.current);
+        if (stepAdvanceTimeoutRef.current) clearTimeout(stepAdvanceTimeoutRef.current);
+      };
     }
+
+    return () => {
+      isMounted.current = false;
+    };
   }, [isOpen]);
+
 
   const getTransactionLabel = () => {
     switch (transactionType) {
@@ -124,26 +142,40 @@ const TransactionModal = ({
   const shouldShowSteps = steps.length > 1;
 
   const handleExecute = async () => {
-    if (!onExecute) return;
+    if (!onExecute || !isMounted.current) return;
 
     setStepStatus(prev => ({ ...prev, execute: 'processing' }));
     try {
       const tx = await onExecute();
+      if (!isMounted.current) return;
+
       if (tx?.hash) {
         setTransactionHash(tx.hash);
-      }
+        // Transition to mining state in the UI
+        setStepStatus(prev => ({ ...prev, execute: 'mining' }));
 
-      // onExecute handles the tx.wait() and notification through showTransaction
-      // so when it returns, the transaction is already confirmed.
+        // Modal will stay in mining state until wait() completes
+        if (tx.wait) {
+          await tx.wait();
+          if (!isMounted.current) return;
+        }
+      }
 
       setStepStatus(prev => ({ ...prev, execute: 'completed' }));
       setIsConfirmed(true);
 
+      // Clear any pending timeouts
+      if (autoCloseTimeoutRef.current) clearTimeout(autoCloseTimeoutRef.current);
+
       // Close modal after 15 seconds
-      setTimeout(() => {
-        onClose();
+      autoCloseTimeoutRef.current = setTimeout(() => {
+        if (isMounted.current) {
+          onClose();
+          autoCloseTimeoutRef.current = null;
+        }
       }, 15000);
     } catch (error) {
+      if (!isMounted.current) return;
       console.error('Execution error:', error);
       setStepStatus(prev => ({ ...prev, execute: 'error' }));
     }
@@ -151,21 +183,23 @@ const TransactionModal = ({
 
   const handleMultiApprove = async (key) => {
     const approveFn = key === 'approveA' ? onApproveA : key === 'approveB' ? onApproveB : onApprove;
-    if (!approveFn) return;
+    if (!approveFn || !isMounted.current) return;
 
     setStepStatus(prev => ({ ...prev, [key]: 'processing' }));
     try {
       const tx = await approveFn();
+      if (!isMounted.current) return;
+
       if (tx?.hash) {
         setTransactionHash(tx.hash);
       }
       if (tx?.wait) {
         await tx.wait();
+        if (!isMounted.current) return;
       }
       setStepStatus(prev => ({ ...prev, [key]: 'completed' }));
 
       // Auto-advance to next step
-      // Calculate index dynamically to avoid stale closure state
       const thisStepIndex = steps.findIndex(s => s.key === key);
       const nextStepIndex = thisStepIndex + 1;
 
@@ -173,23 +207,25 @@ const TransactionModal = ({
         setCurrentStep(nextStepIndex);
         const nextStep = steps[nextStepIndex];
 
-        // Set status to processing so user sees spinner during the 1.5s delay
         setStepStatus(prev => ({ ...prev, [nextStep.key]: 'processing' }));
 
-        // 1.5s delay for UX, then trigger next wallet action
-        setTimeout(async () => {
+        if (stepAdvanceTimeoutRef.current) clearTimeout(stepAdvanceTimeoutRef.current);
+
+        stepAdvanceTimeoutRef.current = setTimeout(async () => {
+          if (!isMounted.current) return;
           if (nextStep) {
             if (nextStep.key === 'execute') {
               await handleExecute();
             } else if (nextStep.key.startsWith('approve')) {
-              // Pass the specific key for the next approval
               await handleMultiApprove(nextStep.key);
             }
           }
-        }, 1500);
+          stepAdvanceTimeoutRef.current = null;
+        }, 500);
       }
 
     } catch (error) {
+      if (!isMounted.current) return;
       console.error('Approval error:', error);
       setStepStatus(prev => ({ ...prev, [key]: 'error' }));
     }
@@ -364,14 +400,38 @@ const TransactionModal = ({
                   </div>
                 </div>
               </>
+            ) : transactionType === 'faucet' ? (
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Claimed Tokens</p>
+                <div className="space-y-3">
+                  {savedFromAmount.split(', ').map((tokenStr, idx) => {
+                    const [amount, symbol] = tokenStr.split(' ');
+                    // Find icon from TOKENS constant if possible
+                    const tokenIcon = Object.values(CONTRACTS).find(t => t.symbol === symbol)?.icon;
+
+                    return (
+                      <div key={idx} className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+                        <div className="flex items-center gap-3">
+                          <Gift className="w-5 h-5 text-[#5a8a3a]" />
+                          <span className="text-sm font-bold text-white">{amount} {symbol}</span>
+                        </div>
+                        {idx === 0 && transactionHash && (
+                          <span className="text-[10px] font-mono text-[#5a8a3a] bg-[#5a8a3a]/10 px-2 py-1 rounded-md">
+                            {transactionHash.slice(0, 6)}...{transactionHash.slice(-4)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             ) : (
               <div>
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
                   {transactionType === 'supply' ? 'Supplied' :
                     transactionType === 'borrow' ? 'Borrowed' :
                       transactionType === 'repay' ? 'Repaid' :
-                        transactionType === 'withdraw' ? 'Withdrawn' :
-                          transactionType === 'faucet' ? 'Claimed' : 'Amount'}
+                        transactionType === 'withdraw' ? 'Withdrawn' : 'Amount'}
                 </p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -379,11 +439,7 @@ const TransactionModal = ({
                       <img src={fromToken.icon} alt="" className="w-6 h-6 rounded-full" />
                     ) : (
                       <div className="w-6 h-6 rounded-full bg-[#5a8a3a]/20 flex items-center justify-center">
-                        {transactionType === 'faucet' ? (
-                          <Gift className="w-3.5 h-3.5 text-[#5a8a3a]" />
-                        ) : (
-                          <div className="w-3.5 h-3.5 rounded-full bg-[#5a8a3a]" />
-                        )}
+                        <div className="w-3.5 h-3.5 rounded-full bg-[#5a8a3a]" />
                       </div>
                     )}
                     <span className="text-base sm:text-lg font-bold text-white">
@@ -444,15 +500,15 @@ const TransactionModal = ({
               <div className="flex items-center justify-center mb-4">
                 <div className="relative flex items-center justify-center">
                   <div className="w-16 h-16 rounded-full bg-black border-2 border-[#5cb849]/30 flex items-center justify-center z-10 transition-transform hover:scale-110">
-                    <img src={fromToken.icon} alt={fromToken.symbol} className="w-10 h-10 rounded-full" />
+                    {fromToken?.icon && <img src={fromToken.icon} alt={fromToken.symbol} className="w-10 h-10 rounded-full" />}
                   </div>
                   <div className="w-16 h-16 rounded-full bg-black border-2 border-[#5cb849]/30 flex items-center justify-center -ml-6 transition-transform hover:scale-110">
-                    <img src={toToken.icon} alt={toToken.symbol} className="w-10 h-10 rounded-full" />
+                    {toToken?.icon && <img src={toToken.icon} alt={toToken.symbol} className="w-10 h-10 rounded-full" />}
                   </div>
                 </div>
               </div>
               <p className="text-white text-lg font-black tracking-tight">
-                {fromAmount} {fromToken.symbol} + {toAmount} {toToken.symbol}
+                {fromAmount} {fromToken?.symbol} + {toAmount} {toToken?.symbol}
               </p>
               <p className="text-[10px] text-[#5cb849] font-bold uppercase tracking-widest mt-1">
                 {transactionType === 'remove_liquidity' ? 'Removing Liquidity' : 'Providing Liquidity'}

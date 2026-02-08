@@ -97,7 +97,12 @@ const Faucet = () => {
 
     fetchClaimable();
     fetchBalances();
-    // Modal will auto-close after 5 seconds showing confirmation
+
+    // Delay refresh to allow RPC/Indexer to catch up
+    setTimeout(() => {
+      fetchClaimable();
+      fetchBalances();
+    }, 2000);
 
     return tx;
   };
@@ -213,24 +218,24 @@ const Faucet = () => {
       </div>
 
       {/* Transaction Modal */}
-      <TransactionModal
-        isOpen={showModal}
-        onClose={() => {
-          setShowModal(false);
-          setIsBlurActive(false);
-        }}
-        transactionType="faucet"
-        fromToken={null}
-        toToken={null}
-        fromAmount={formatTokenAmount(claimable.catAmount, TOKENS.CAT.decimals) + ' CAT, ' +
-          formatTokenAmount(claimable.darcAmount, TOKENS.DARC.decimals) + ' DARC, ' +
-          formatTokenAmount(claimable.pandaAmount, TOKENS.PANDA.decimals) + ' PANDA'}
-        toAmount=""
-        onApprove={undefined}
-        onExecute={handleExecuteClaim}
-        requiresApproval={false}
-        transactionParams={{}}
-      />
+      {showModal && (
+        <TransactionModal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false);
+            setIsBlurActive(false);
+          }}
+          transactionType="faucet"
+          fromToken={null}
+          toToken={null}
+          fromAmount={`${formatTokenAmount(claimable.catAmount, TOKENS.CAT.decimals)} CAT, ${formatTokenAmount(claimable.darcAmount, TOKENS.DARC.decimals)} DARC, ${formatTokenAmount(claimable.pandaAmount, TOKENS.PANDA.decimals)} PANDA`}
+          toAmount=""
+          onApprove={undefined}
+          onExecute={handleExecuteClaim}
+          requiresApproval={false}
+          transactionParams={{}}
+        />
+      )}
     </div>
   );
 };
