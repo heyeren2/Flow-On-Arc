@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { WagmiProvider } from 'wagmi';
 import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit';
@@ -7,18 +7,26 @@ import { ARC_TESTNET } from './constants/contracts';
 import '@rainbow-me/rainbowkit/styles.css';
 import { NotificationProvider, useNotifications } from './components/NotificationProvider';
 import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
-import Swap from './components/Swap';
-import LendBorrow from './components/LendBorrow';
-import Faucet from './components/Faucet';
-import Activity from './components/Activity';
-import Pool from './components/Pool';
+// Lazy load route components for code splitting
+const Dashboard = React.lazy(() => import('./components/Dashboard'));
+const Swap = React.lazy(() => import('./components/Swap'));
+const LendBorrow = React.lazy(() => import('./components/LendBorrow'));
+const Faucet = React.lazy(() => import('./components/Faucet'));
+const Activity = React.lazy(() => import('./components/Activity'));
+const Pool = React.lazy(() => import('./components/Pool'));
 import { Twitter, MessageSquare, Bell, Menu, Plus, X, Github, Home, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import FeedbackModal from './components/FeedbackModal';
 import ChangelogModal from './components/ChangelogModal';
 import LandingPage from './components/LandingPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageTransition from './components/PageTransition';
+
+// Loading fallback for lazy components
+const LazyLoader = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <div className="w-8 h-8 border-2 border-[#5cb849] border-t-transparent rounded-full animate-spin"></div>
+  </div>
+);
 
 // Custom Brand Icons
 const XIcon = ({ className }) => (
@@ -196,25 +204,27 @@ function AppLayout() {
         </button>
 
         <main className={`flex-1 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} p-4 lg:p-8 w-full max-w-full overflow-x-hidden transition-all duration-150 ${(isBlurActive || isMobileMenuOpen) ? 'blur-[6px]' : ''}`}>
-          <Routes>
-            <Route path="/dashboard" element={<Dashboard setLendBorrowInitialTab={setLendBorrowInitialTab} setActiveTab={(tab) => {
-              const pathMap = {
-                'dashboard': '/dashboard',
-                'swap': '/swap',
-                'pool': '/pool',
-                'lend-borrow': '/lend-borrow',
-                'faucet': '/faucet',
-                'activity': '/activity'
-              };
-              if (pathMap[tab]) navigate(pathMap[tab]);
-            }} />} />
-            <Route path="/swap" element={<Swap />} />
-            <Route path="/pool" element={<Pool />} />
-            <Route path="/lend-borrow" element={<LendBorrow initialTab={lendBorrowInitialTab} />} />
-            <Route path="/faucet" element={<Faucet />} />
-            <Route path="/activity" element={<Activity />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
+          <Suspense fallback={<LazyLoader />}>
+            <Routes>
+              <Route path="/dashboard" element={<Dashboard setLendBorrowInitialTab={setLendBorrowInitialTab} setActiveTab={(tab) => {
+                const pathMap = {
+                  'dashboard': '/dashboard',
+                  'swap': '/swap',
+                  'pool': '/pool',
+                  'lend-borrow': '/lend-borrow',
+                  'faucet': '/faucet',
+                  'activity': '/activity'
+                };
+                if (pathMap[tab]) navigate(pathMap[tab]);
+              }} />} />
+              <Route path="/swap" element={<Swap />} />
+              <Route path="/pool" element={<Pool />} />
+              <Route path="/lend-borrow" element={<LendBorrow initialTab={lendBorrowInitialTab} />} />
+              <Route path="/faucet" element={<Faucet />} />
+              <Route path="/activity" element={<Activity />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
 

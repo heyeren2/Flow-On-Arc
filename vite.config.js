@@ -24,7 +24,18 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        // Manual chunks for better caching - vendor code changes less often
+        manualChunks: {
+          // Core React ecosystem
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // Ethereum libraries (largest chunks)
+          'vendor-ethers': ['ethers'],
+          'vendor-wagmi': ['wagmi', 'viem', '@tanstack/react-query'],
+          // Wallet connectors (loaded when needed)
+          'vendor-rainbowkit': ['@rainbow-me/rainbowkit'],
+          // UI libraries
+          'vendor-ui': ['framer-motion', 'lucide-react'],
+        },
       },
       onwarn(warning, warn) {
         // Suppress specific warnings that might cause build failures
