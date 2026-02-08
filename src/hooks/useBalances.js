@@ -65,7 +65,7 @@ export function useBalances(provider, address) {
       // Fetch immediately
       fetchBalances();
       // Then set up interval
-      const interval = setInterval(fetchBalances, 30000); // Refresh every 30 seconds
+      const interval = setInterval(fetchBalances, 60000); // Refresh every 60 seconds (reduced for bandwidth)
       return () => clearInterval(interval);
     } else {
       // Reset balances if no provider or address

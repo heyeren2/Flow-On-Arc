@@ -30,8 +30,8 @@ export function useTokenPrices(provider) {
 
   useEffect(() => {
     fetchPrices();
-    // Refresh prices every 30 seconds
-    const interval = setInterval(fetchPrices, 30000);
+    // Refresh prices every 2 minutes (reduced for bandwidth - prices don't change that fast)
+    const interval = setInterval(fetchPrices, 120000);
     return () => clearInterval(interval);
   }, [provider]);
 
