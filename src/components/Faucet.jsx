@@ -178,8 +178,14 @@ const Faucet = () => {
 
         <button
           onClick={handleClaim}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            if (isConnected && claimable.canClaim && !claiming) {
+              handleClaim();
+            }
+          }}
           disabled={!isConnected || !claimable.canClaim || claiming}
-          className="w-full gradient-bg text-white py-3 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-md"
+          className="w-full gradient-bg text-white py-4 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 active:opacity-80 transition-opacity flex items-center justify-center gap-2 shadow-md min-h-[52px] touch-manipulation"
         >
           <Gift className="w-5 h-5" />
           {claiming

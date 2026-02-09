@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, CheckCircle2, Clock, ChevronRight, Gift, Rocket, ExternalLink } from 'lucide-react';
 import { ARC_TESTNET } from '../constants/contracts';
+import { TOKENS } from '../constants/tokens';
 import { formatUSD } from '../utils/formatters';
 
 const TransactionModal = ({
@@ -337,17 +338,32 @@ const TransactionModal = ({
           <div className="bg-[#111111] border border-[#1a1a1a] rounded-2xl p-5 mb-8 text-left space-y-4">
             {transactionType === 'add_liquidity' || transactionType === 'remove_liquidity' ? (
               <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
                   {transactionType === 'add_liquidity' ? 'Added' : 'Removed'}
                 </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2">
-                      {fromToken?.icon && <img src={fromToken.icon} alt="" className="w-6 h-6 rounded-full border-2 border-[#111]" />}
-                      {toToken?.icon && <img src={toToken.icon} alt="" className="w-6 h-6 rounded-full border-2 border-[#111]" />}
-                    </div>
-                    <span className="text-base sm:text-lg font-bold text-white">
-                      {truncateAmount(savedFromAmount)} {fromToken?.symbol} + {truncateAmount(savedToAmount)} {toToken?.symbol}
+                {/* Token A Row */}
+                <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5 mb-2">
+                  <div className="flex items-center gap-3">
+                    {fromToken?.icon ? (
+                      <img src={fromToken.icon} alt={fromToken.symbol} className="w-8 h-8 rounded-full" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-[#5a8a3a]/20" />
+                    )}
+                    <span className="text-base font-bold text-white">
+                      {truncateAmount(savedFromAmount)} {fromToken?.symbol}
+                    </span>
+                  </div>
+                </div>
+                {/* Token B Row */}
+                <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+                  <div className="flex items-center gap-3">
+                    {toToken?.icon ? (
+                      <img src={toToken.icon} alt={toToken.symbol} className="w-8 h-8 rounded-full" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-[#5a8a3a]/20" />
+                    )}
+                    <span className="text-base font-bold text-white">
+                      {truncateAmount(savedToAmount)} {toToken?.symbol}
                     </span>
                   </div>
                   {transactionHash && (
@@ -404,15 +420,22 @@ const TransactionModal = ({
               <div>
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Claimed Tokens</p>
                 <div className="space-y-3">
-                  {savedFromAmount.split(', ').map((tokenStr, idx) => {
-                    const [amount, symbol] = tokenStr.split(' ');
-                    // Find icon from TOKENS constant if possible
-                    const tokenIcon = Object.values(CONTRACTS).find(t => t.symbol === symbol)?.icon;
+                  {(savedFromAmount || 'Tokens claimed').split(', ').map((tokenStr, idx) => {
+                    const parts = tokenStr.trim().split(' ');
+                    const amount = parts[0] || '0';
+                    const symbol = parts[1] || 'Token';
+                    // Find the token icon from TOKENS constant
+                    const tokenData = Object.values(TOKENS).find(t => t.symbol === symbol);
+                    const tokenIcon = tokenData?.icon;
 
                     return (
                       <div key={idx} className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
                         <div className="flex items-center gap-3">
-                          <Gift className="w-5 h-5 text-[#5a8a3a]" />
+                          {tokenIcon ? (
+                            <img src={tokenIcon} alt={symbol} className="w-6 h-6 rounded-full" />
+                          ) : (
+                            <Gift className="w-5 h-5 text-[#5a8a3a]" />
+                          )}
                           <span className="text-sm font-bold text-white">{amount} {symbol}</span>
                         </div>
                         {idx === 0 && transactionHash && (
@@ -587,8 +610,17 @@ const TransactionModal = ({
           <div className="mb-6 bg-[#111111] border border-[#2a2a2a] rounded-2xl p-4">
             <div className="text-center">
               <div className="flex items-center justify-center mb-2">
-                <div className="w-12 h-12 rounded-full bg-[#5a8a3a]/20 flex items-center justify-center">
-                  <Gift className="w-8 h-8 text-[#5a8a3a]" />
+                {/* Three overlapping token icons like pool pairs */}
+                <div className="relative flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-black border-2 border-[#5a8a3a]/30 flex items-center justify-center z-30">
+                    <img src={TOKENS.CAT.icon} alt="CAT" className="w-8 h-8 rounded-full" />
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-black border-2 border-[#5a8a3a]/30 flex items-center justify-center -ml-4 z-20">
+                    <img src={TOKENS.DARC.icon} alt="DARC" className="w-8 h-8 rounded-full" />
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-black border-2 border-[#5a8a3a]/30 flex items-center justify-center -ml-4 z-10">
+                    <img src={TOKENS.PANDA.icon} alt="PANDA" className="w-8 h-8 rounded-full" />
+                  </div>
                 </div>
               </div>
               <p className="text-xs text-gray-500 mb-1">Arc Testnet</p>
