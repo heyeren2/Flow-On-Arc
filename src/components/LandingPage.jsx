@@ -123,26 +123,31 @@ const LandingPage = () => {
             icon: Gauge,
             title: 'Dashboard',
             description: 'Real-time portfolio analytics and tracking.',
+            type: 'dashboard'
           },
           {
             icon: Repeat,
             title: 'Swap',
             description: 'Instant token exchange with minimal slippage.',
+            type: 'swap'
           },
           {
             icon: Waves,
             title: 'Pool',
             description: 'Provide liquidity and earn trading fees.',
+            type: 'pool'
           },
           {
             icon: Landmark,
             title: 'Lend & Borrow',
             description: 'Earn yield or borrow assets seamlessly.',
+            type: 'lend'
           },
           {
             icon: Coins,
             title: 'Faucet Claim',
             description: 'Get testnet tokens to start experimenting.',
+            type: 'faucet'
           },
         ];
 
@@ -296,17 +301,73 @@ const LandingPage = () => {
                     return (
                       <div
                         key={index}
-                        className="glass-card p-8 rounded-[2rem] group"
+                        className="glass-card p-8 rounded-[2rem] group relative flex flex-col items-start overflow-hidden min-h-[280px]"
                       >
-                        <div className="w-14 h-14 rounded-2xl bg-[#5a8a3a]/10 border border-[#5a8a3a]/20 flex items-center justify-center mb-6 group-hover:bg-[#5a8a3a]/20 transition-all duration-300 group-hover:scale-110">
-                          <Icon className="w-7 h-7 text-[#5a8a3a]" />
+                        <div className="relative z-10 w-full">
+                          <div className="w-14 h-14 rounded-2xl bg-[#5a8a3a]/10 border border-[#5a8a3a]/20 flex items-center justify-center mb-6 group-hover:bg-[#5a8a3a]/20 transition-all duration-300 group-hover:scale-110">
+                            <Icon className="w-7 h-7 text-[#5a8a3a]" />
+                          </div>
+                          <h3 className="text-white font-bold text-xl mb-3">{feature.title}</h3>
+                          <p className="text-gray-500 text-sm leading-relaxed font-medium mb-8">{feature.description}</p>
                         </div>
-                        <h3 className="text-white font-bold text-xl mb-3">{feature.title}</h3>
-                        <p className="text-gray-500 text-sm leading-relaxed font-medium">{feature.description}</p>
+
+                        {/* Card-Specific Visual Elements */}
+                        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                          {/* Dashboard Viz: Mini Bar Chart - Increased Visibility, Removed Pulse */}
+                          {feature.type === 'dashboard' && (
+                            <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between gap-1.5 h-10 opacity-80 group-hover:opacity-100 transition-opacity">
+                              <div className="flex-1 bg-[#5a8a3a]/40 rounded-t-sm" style={{ height: '30%' }}></div>
+                              <div className="flex-1 bg-[#5a8a3a]/50 rounded-t-sm" style={{ height: '55%' }}></div>
+                              <div className="flex-1 bg-[#5a8a3a]/40 rounded-t-sm" style={{ height: '40%' }}></div>
+                              <div className="flex-1 bg-[#22c55e]/70 rounded-t-sm" style={{ height: '85%' }}></div>
+                              <div className="flex-1 bg-[#5a8a3a]/50 rounded-t-sm" style={{ height: '70%' }}></div>
+                            </div>
+                          )}
+
+                          {/* Swap Viz: Floating Token Icons - Increased Visibility */}
+                          {feature.type === 'swap' && (
+                            <div className="absolute bottom-2 right-2 w-24 h-24">
+                              <img src="/icons/USDC.png" className="absolute top-0 right-4 w-10 h-10 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all" alt="" />
+                              <img src="/icons/CAT.png" className="absolute bottom-4 right-8 w-12 h-12 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all delay-75" alt="" />
+                              <img src="/icons/PANDA.png" className="absolute bottom-8 right-0 w-10 h-10 opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all delay-150" alt="" />
+                            </div>
+                          )}
+
+                          {/* Pool Viz: Clustered Token Icons - Removed Borders */}
+                          {feature.type === 'pool' && (
+                            <div className="absolute bottom-6 right-6 flex items-center">
+                              <div className="relative flex -space-x-4 opacity-80 group-hover:opacity-100 group-hover:-space-x-2 transition-all">
+                                <img src="/icons/USDC.png" className="w-10 h-10 rounded-full" alt="" />
+                                <img src="/icons/CAT.png" className="w-10 h-10 rounded-full" alt="" />
+                                <img src="/icons/DARC.png" className="w-10 h-10 rounded-full" alt="" />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Lend/Borrow Viz: Upward Trend */}
+                          {feature.type === 'lend' && (
+                            <div className="absolute bottom-6 right-8 opacity-20 group-hover:opacity-40 transition-opacity">
+                              <svg className="w-20 h-20 text-[#5a8a3a] transform rotate-[-5deg]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                              </svg>
+                            </div>
+                          )}
+
+                          {/* Faucet Viz: Coin Drop */}
+                          {feature.type === 'faucet' && (
+                            <div className="absolute bottom-8 right-8 w-12 h-12 rounded-full border-2 border-[#5a8a3a]/20 flex items-center justify-center opacity-40 group-hover:opacity-80 transition-all group-hover:scale-110">
+                              <div className="w-6 h-6 rounded-full border border-[#5a8a3a] flex items-center justify-center">
+                                <div className="w-0.5 h-3 bg-[#5a8a3a]"></div>
+                              </div>
+                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full border border-[#5a8a3a]/30 animate-ping"></div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
                 </div>
+
 
                 {/* Brand-Aligned CTA Card */}
                 <div className="max-w-[98%] mx-auto w-full mt-32 mb-24 lg:px-6 px-4">
