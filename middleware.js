@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server';
-
 /**
  * Vercel Edge Middleware to block aggressive/malicious bots.
  * This runs at the edge before the request reaches the origin.
+ * 
+ * Note: For non-Next.js projects, we use standard Web APIs (Request/Response).
  */
-export function middleware(request) {
+export default function middleware(request) {
   const userAgent = request.headers.get('user-agent') || '';
-  
+
   // List of aggressive bot signatures
   const blockedBots = [
     'aiohttp',
@@ -41,23 +41,26 @@ export function middleware(request) {
   const lowerUA = userAgent.toLowerCase();
   const isBlocked = blockedBots.some(bot => lowerUA.includes(bot.toLowerCase()));
 
-  // Allow known browser engines but block headless or suspicious patterns
+  // Block identified bots
   if (isBlocked) {
     console.log(`[Middleware] Blocked request from User-Agent: ${userAgent}`);
-    return new NextResponse(
-      JSON.stringify({ error: 'Access denied: Automated traffic detected.' }),
-      { 
-        status: 403, 
-        headers: { 'content-type': 'application/json' } 
+    return new Response(
+      JSON.stringify({
+        error: 'Access denied: Automated traffic detected.',
+        message: 'If you are a human and believe this is an error, please contact us.'
+      }),
+      {
+        status: 403,
+        headers: { 'content-type': 'application/json' }
       }
     );
   }
 
-  return NextResponse.next();
+  // To allow the request to proceed, return nothing (undefined)
+  return;
 }
 
-// Only run middleware on static resource requests if they seem to be the primary target
-// or on all requests to catch page-level scraping.
+// Optimization: Matcher to limit where the middleware runs
 export const config = {
   matcher: [
     /*
@@ -66,7 +69,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - assets (Vite assets)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|assets).*)',
   ],
 };
