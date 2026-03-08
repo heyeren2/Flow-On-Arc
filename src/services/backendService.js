@@ -134,7 +134,7 @@ export async function fetchBackendTransactions(limit = 50, offset = 0, type = nu
       amountOut: tx.amountOut ? parseFloat(tx.amountOut) : 0,
       usdValue: parseFloat(tx.usdValue),
       walletShort: `${tx.wallet.slice(0, 6)}...${tx.wallet.slice(-4)}`,
-      explorerUrl: `https://arcscan.io/tx/${tx.txHash}`
+      explorerUrl: `https://testnet.arcscan.app/tx/${tx.txHash}`
     }));
 
     // Map type to the correct count field
