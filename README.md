@@ -49,6 +49,12 @@ The dApp integrates with three main contracts:
 - **PANDA**: PANDA Token (18 decimals)
 - **USDC**: USDC (6 decimals) - used for faucet tier system
 
+## Security
+
+This repository includes a `middleware.js` file at the root. **This is not malware.** It is a standard [Vercel Edge Middleware](https://vercel.com/docs/functions/edge-middleware) file, which is a Vercel platform convention (like `next.config.js` for Next.js).
+
+Its sole purpose is to **block known bot and scraper traffic** (e.g., `GPTBot`, `CCBot`, automated scripts) before those requests hit the server, helping keep the app within Vercel's tier usage limits. It does not collect, transmit, or store any user data.
+
 ## License
 
 MIT
