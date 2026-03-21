@@ -1,10 +1,28 @@
-User-agent: *
-Disallow: /api/
-Disallow: /_next/
-Disallow: /static/
+# Allow search engines to index the landing page
+User-agent: Googlebot
+Allow: /
+Disallow: /swap
+Disallow: /pool
+Disallow: /bridge
+Disallow: /faucet
+Disallow: /dashboard
+Disallow: /activity
+Disallow: /lend-borrow
 Crawl-delay: 10
 
-# Block aggressive crawlers
+# Allow all well-behaved bots to see landing only
+User-agent: *
+Allow: /
+Disallow: /swap
+Disallow: /pool
+Disallow: /bridge
+Disallow: /faucet
+Disallow: /dashboard
+Disallow: /activity
+Disallow: /lend-borrow
+Crawl-delay: 10
+
+# Block AI scrapers entirely
 User-agent: GPTBot
 Disallow: /
 
@@ -25,3 +43,30 @@ Disallow: /
 
 User-agent: OAI-SearchBot
 Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: YandexBot
+Disallow: /
+
+# Sitemap
+Sitemap: https://flow-on-arc.vercel.app/sitemap.xml
