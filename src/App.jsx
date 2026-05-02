@@ -20,6 +20,7 @@ import ChangelogModal from './components/ChangelogModal';
 import LandingPage from './components/LandingPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageTransition from './components/PageTransition';
+import SecurityGate from './components/SecurityGate';
 
 // Loading fallback for lazy components
 const LazyLoader = () => (
@@ -375,7 +376,9 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider>
             <NotificationProvider>
-              <PageTransitionWrapper />
+              <SecurityGate>
+                <PageTransitionWrapper />
+              </SecurityGate>
             </NotificationProvider>
           </RainbowKitProvider>
         </QueryClientProvider>

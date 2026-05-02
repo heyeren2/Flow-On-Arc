@@ -181,14 +181,15 @@ const TokenSelector = ({
               ═══════════════════════════════════════════════════════════════ */}
           <div
             ref={modalRef}
+            className="w-full max-w-[400px] sm:max-w-[460px] max-h-[85vh] sm:max-h-[90vh] overflow-hidden bg-[#1a1a1a] p-5 sm:p-6 border border-[#2a2a2a] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.05)]"
             style={{
               opacity: isAnimating ? 1 : 0,
               transform: isAnimating
                 ? 'scale(1) translateY(0px)'
                 : 'scale(0.96) translateY(12px)',
               transition: 'all 250ms cubic-bezier(0.16, 1, 0.3, 1)',
+              borderRadius: '56px',
             }}
-            className="w-full max-w-[400px] sm:max-w-[460px] max-h-[85vh] sm:max-h-[90vh] overflow-hidden bg-[#1a1a1a] rounded-2xl p-5 sm:p-6 border border-[#2a2a2a] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.05)]"
           >
             {/* ═══════════════════════════════════════════════════════════════
                 HEADER
