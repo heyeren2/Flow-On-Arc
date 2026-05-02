@@ -43,8 +43,8 @@ const SecurityGate = ({ children }) => {
                             alt="Flow On Arc" 
                             className="security-logo"
                         />
+                        <h1 className="security-domain">flowonarc.xyz</h1>
                     </div>
-                    <h1 className="security-domain">flowonarc.xyz</h1>
                     <h2>Performing security verification</h2>
                     <p>
                         This website uses a security service to protect against malicious bots. 

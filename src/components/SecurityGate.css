@@ -30,22 +30,22 @@
     display: flex;
     justify-content: flex-start;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 24px;
+    gap: 16px;
+    margin-bottom: 32px;
 }
 
 .security-logo {
-    height: 48px;
+    height: 40px;
     width: auto;
     filter: drop-shadow(0 0 12px rgba(92, 184, 73, 0.4));
 }
 
 .security-domain {
-    font-size: 42px;
+    font-size: 48px;
     font-weight: 700;
-    margin-bottom: 24px;
     letter-spacing: -0.02em;
     color: #ffffff;
+    margin: 0;
 }
 
 .security-gate-header h2 {
