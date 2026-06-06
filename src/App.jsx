@@ -21,6 +21,7 @@ import LandingPage from './components/LandingPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageTransition from './components/PageTransition';
 import SecurityGate from './components/SecurityGate';
+import FaucetClaimedModal from './components/FaucetClaimedModal';
 
 // Loading fallback for lazy components
 const LazyLoader = () => (
@@ -123,6 +124,7 @@ function AppLayout() {
   const [lendBorrowInitialTab, setLendBorrowInitialTab] = useState('supply');
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+  const [isFaucetClaimedModalOpen, setIsFaucetClaimedModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileActionMenuOpen, setIsMobileActionMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
@@ -137,6 +139,16 @@ function AppLayout() {
     localStorage.setItem('sidebar-collapsed', isSidebarCollapsed);
   }, [isSidebarCollapsed]);
 
+  // Handle URL query parameter for faucet refilling modal redirect
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('showFaucetRefilling') === 'true') {
+      setIsFaucetClaimedModalOpen(true);
+      // Remove the query parameter from URL
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.search, location.pathname, navigate]);
+
   React.useEffect(() => {
     const handleNavigate = (e) => {
       const tab = e.detail;
@@ -148,6 +160,10 @@ function AppLayout() {
         'faucet': '/faucet',
         'activity': '/activity'
       };
+      if (tab === 'faucet') {
+        setIsFaucetClaimedModalOpen(true);
+        return;
+      }
       if (pathMap[tab]) {
         navigate(pathMap[tab]);
       }
@@ -183,6 +199,7 @@ function AppLayout() {
           setIsMobileOpen={setIsMobileMenuOpen}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          onFaucetClick={() => setIsFaucetClaimedModalOpen(true)}
           className={`transition-all duration-150 ${isBlurActive ? 'blur-xl grayscale opacity-40' : ''}`}
         />
 
@@ -216,12 +233,16 @@ function AppLayout() {
                   'faucet': '/faucet',
                   'activity': '/activity'
                 };
+                if (tab === 'faucet') {
+                  setIsFaucetClaimedModalOpen(true);
+                  return;
+                }
                 if (pathMap[tab]) navigate(pathMap[tab]);
               }} />} />
               <Route path="/swap" element={<Swap />} />
               <Route path="/pool" element={<Pool />} />
               <Route path="/lend-borrow" element={<LendBorrow initialTab={lendBorrowInitialTab} />} />
-              <Route path="/faucet" element={<Faucet />} />
+              <Route path="/faucet" element={<Navigate to="/dashboard?showFaucetRefilling=true" replace />} />
               <Route path="/activity" element={<Activity />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
@@ -364,6 +385,12 @@ function AppLayout() {
       <ChangelogModal
         isOpen={isChangelogOpen}
         onClose={() => setIsChangelogOpen(false)}
+      />
+
+      {/* Faucet Claimed Modal */}
+      <FaucetClaimedModal
+        isOpen={isFaucetClaimedModalOpen}
+        onClose={() => setIsFaucetClaimedModalOpen(false)}
       />
     </div>
   );

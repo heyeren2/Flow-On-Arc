@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { Gauge, Repeat, Landmark, Coins, ScrollText, Wallet, X, ChevronDown, Home, Waves } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
-const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed = false, onToggleCollapse, className = '' }) => {
+const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed = false, onToggleCollapse, className = '', onFaucetClick }) => {
   const location = useLocation();
 
   const menuItems = [
@@ -64,20 +64,25 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed = false, onToggleC
         <nav className="flex-1 p-4 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const isActive = item.id === 'faucet' ? false : (location.pathname === item.path);
 
             return (
               <NavLink
                 key={item.id}
-                to={item.path}
+                to={item.id === 'faucet' ? '#' : item.path}
                 onClick={(e) => {
                   setIsMobileOpen(false);
                   if (item.id === 'home') {
                     e.preventDefault();
                     window.dispatchEvent(new CustomEvent('start-page-transition', { detail: { path: item.path } }));
+                  } else if (item.id === 'faucet') {
+                    e.preventDefault();
+                    if (onFaucetClick) {
+                      onFaucetClick();
+                    }
                   }
                 }}
-                className={({ isActive }) =>
+                className={() =>
                   `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all min-h-[44px] ${isActive
                     ? 'gradient-bg text-white shadow-lg shadow-[#5a8a3a]/20 font-semibold'
                     : 'text-gray-400 hover:text-white hover:bg-[#1a1a1a]'
