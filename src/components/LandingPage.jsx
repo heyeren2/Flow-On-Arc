@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Repeat, Gauge, Waves, Landmark, Coins, Rocket, Github, ChevronDown, Wallet, BarChart3, ArrowLeftRight, X, Info, MousePointer2 } from 'lucide-react';
+import { Repeat, Gauge, Waves, Landmark, Coins, Github, ChevronDown, Wallet, BarChart3, ArrowLeftRight, X, Info, MousePointer2 } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useEthersProvider } from '../hooks/useEthers';
 import { getProtocolStats } from '../services/statsService';
@@ -248,10 +248,9 @@ const LandingPage = () => {
                   {/* Launch App Button */}
                   <button
                     onClick={handleAction}
-                    className="px-10 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-black rounded-xl font-black text-xl transition-all duration-300 inline-flex items-center gap-3 shadow-[0_10px_30px_-10px_rgba(34,197,94,0.5)] hover:transform hover:translate-y-[-2px] active:translate-y-[0px]"
+                    className="px-10 py-4 bg-[#4a7c2a] hover:bg-[#4a7c2a] text-white rounded-xl font-black text-xl transition-all duration-300 inline-flex items-center justify-center shadow-[0_10px_30px_-10px_rgba(72,146,254,0)] hover:transform hover:translate-y-[-2px] active:translate-y-[0px]"
                   >
                     Launch App
-                    <Rocket className="w-6 h-6 text-black" />
                   </button>
                 </div>
 
